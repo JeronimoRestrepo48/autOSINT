@@ -1,0 +1,15 @@
+# Python project .gitignore file
+config/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.log
+*.sqlite3
+*.db
+*.csv
+*.json
+*.xlsx
+*.xls
+*.xml
