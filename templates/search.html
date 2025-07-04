@@ -453,10 +453,24 @@
                 <button class="tab-btn" onclick="showTab('contact')">Contactos</button>
                 <button class="tab-btn" onclick="showTab('news')">Noticias</button>
                 <button class="tab-btn" onclick="showTab('government')">Gubernamental</button>
+                <button class="tab-btn" onclick="showTab('ai_search')"><i class="fas fa-magic"></i> Búsqueda IA</button>
+            </div>
+
+            <!-- Búsqueda Asistida por IA -->
+            <div id="ai_searchTab" class="tab-content">
+                <form id="aiSearchForm">
+                    <div class="form-group">
+                        <label for="aiPrompt">Describe tu investigación (Prompt IA):</label>
+                        <textarea id="aiPrompt" name="aiPrompt" rows="4" placeholder="Ej: Investiga a la empresa 'Tech Solutions Ltd.' sobre posibles vulnerabilidades de seguridad y noticias recientes."></textarea>
+                    </div>
+                    <button type="submit" class="btn" id="aiSearchBtn" data-default-text='<i class="fas fa-cogs"></i> Procesar con IA' data-searching-text='<i class="fas fa-spinner fa-spin"></i> Procesando con IA...'>
+                        <i class="fas fa-cogs"></i> Procesar con IA
+                    </button>
+                </form>
             </div>
 
             <!-- Búsqueda General -->
-            <div id="generalTab" class="tab-content active">
+            <div id="generalTab" class="tab-content active"> <!-- Por defecto activa general -->
                 <form id="searchForm">
                     <div class="form-group">
                         <label for="query">Término de Búsqueda:</label>
@@ -494,7 +508,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn" id="searchBtn">
+                    <button type="submit" class="btn" id="searchBtn" data-default-text='<i class="fas fa-search"></i> Iniciar Búsqueda' data-searching-text='<i class="fas fa-spinner fa-spin"></i> Buscando...'>
                         <i class="fas fa-search"></i> Iniciar Búsqueda
                     </button>
                 </form>
@@ -1059,6 +1073,15 @@ document.addEventListener('DOMContentLoaded', function() {
         performGovernmentSearch();
     });
 
+    // Manejar búsqueda con IA
+    const aiSearchForm = document.getElementById('aiSearchForm');
+    if (aiSearchForm) {
+        aiSearchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            performAISearch();
+        });
+    }
+
     function performGeneralSearch() {
         const query = document.getElementById('query').value.trim();
         const searchType = document.getElementById('searchType').value;
@@ -1174,6 +1197,41 @@ document.addEventListener('DOMContentLoaded', function() {
         performApiCall('/api/search/government', requestData);
     }
 
+    function performAISearch() {
+        const prompt = document.getElementById('aiPrompt').value.trim();
+        if (!prompt) {
+            alert('Por favor ingresa tu descripción para la búsqueda con IA.');
+            return;
+        }
+        showLoading();
+        const requestData = { prompt: prompt };
+
+        // Usamos un manejador de resultados diferente para la IA
+        fetch('/api/ai_search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                displayAIResults(data);
+            } else {
+                alert('Error en la búsqueda con IA: ' + (data.error || 'Error desconocido.') + (data.details ? '\nDetalles: ' + data.details : ''));
+                document.getElementById('noResults').classList.remove('hidden');
+                document.getElementById('searchResults').classList.add('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Error en búsqueda IA:', error);
+            hideLoading();
+            alert('Error de conexión con el servidor de IA: ' + error.message);
+            document.getElementById('noResults').classList.remove('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+        });
+    }
+
     function getSelectedSources(sourceName) {
         const checkboxes = document.querySelectorAll(`input[name="${sourceName}"]:checked`);
         return Array.from(checkboxes).map(checkbox => checkbox.value);
@@ -1261,7 +1319,67 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        searchResults.style.display = 'block';
+        searchResults.classList.remove('hidden');
+        noResults.classList.add('hidden');
+    }
+
+    function displayAIResults(data) {
+        const resultsContainer = document.getElementById('resultsContainer');
+        const searchResultsDiv = document.getElementById('searchResults');
+        const noResultsDiv = document.getElementById('noResults');
+
+        resultsContainer.innerHTML = ''; // Limpiar resultados anteriores
+
+        document.getElementById('totalResults').textContent = data.raw_results_sample ? data.raw_results_sample.length : 0;
+        document.getElementById('highRiskResults').textContent = data.raw_results_sample ? data.raw_results_sample.filter(r => r.risk_level === 'high').length : 0;
+        // Podríamos añadir un campo de tiempo de ejecución si la API de IA lo devuelve
+        document.getElementById('executionTime').textContent = 'N/A';
+
+
+        // Mostrar Interpretación de IA
+        if (data.interpretation) {
+            const interpretationCard = document.createElement('div');
+            interpretationCard.className = 'result-card';
+            interpretationCard.innerHTML = `
+                <h5><i class="fas fa-lightbulb"></i> Interpretación de IA del Prompt</h5>
+                <p><strong>Objetivo Principal:</strong> ${data.interpretation.main_target || 'No especificado'}</p>
+                <p><strong>Tipo de Objetivo:</strong> ${data.interpretation.target_type || 'No especificado'}</p>
+                <p><strong>Detalles Específicos:</strong> <pre>${JSON.stringify(data.interpretation.specific_details, null, 2)}</pre></p>
+                <p><strong>Información Solicitada:</strong> ${data.interpretation.information_needed ? data.interpretation.information_needed.join(', ') : 'No especificado'}</p>
+                <p><strong>Sugerencias de Fuentes:</strong> ${data.interpretation.sources_hint ? data.interpretation.sources_hint.join(', ') : 'No especificado'}</p>
+                <p><strong>Google Dorking Sugerido:</strong> ${data.interpretation.enable_dorking ? 'Sí' : 'No'}</p>
+            `;
+            resultsContainer.appendChild(interpretationCard);
+        }
+
+        // Mostrar Resumen de IA
+        if (data.summary) {
+            const summaryCard = document.createElement('div');
+            summaryCard.className = 'result-card';
+            summaryCard.innerHTML = `
+                <h5><i class="fas fa-file-alt"></i> Resumen Ejecutivo por IA</h5>
+                <p style="white-space: pre-wrap;">${data.summary}</p>
+            `;
+            resultsContainer.appendChild(summaryCard);
+        }
+
+        // Mostrar Muestra de Resultados Crudos
+        if (data.raw_results_sample && data.raw_results_sample.length > 0) {
+            const rawResultsHeader = document.createElement('h5');
+            rawResultsHeader.innerHTML = '<i class="fas fa-list-ul"></i> Muestra de Resultados Crudos';
+            rawResultsHeader.style.marginTop = '20px';
+            resultsContainer.appendChild(rawResultsHeader);
+
+            data.raw_results_sample.forEach((result, index) => {
+                const resultCard = createGeneralResultCard(result, index); // Reutilizamos la función existente
+                resultsContainer.appendChild(resultCard);
+            });
+        } else if (!data.summary && !data.interpretation) {
+             resultsContainer.innerHTML = '<p>No se recibieron datos estructurados de la IA.</p>';
+        }
+
+        searchResultsDiv.classList.remove('hidden');
+        noResultsDiv.classList.add('hidden');
     }
 
     function createGeneralResultCard(result, index) {

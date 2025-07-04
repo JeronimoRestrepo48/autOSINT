@@ -37,6 +37,12 @@ function setupEventListeners() {
     if (searchForm) {
         searchForm.addEventListener('submit', handleSearchSubmit);
     }
+
+    // Formulario de búsqueda IA (si existe en la página actual)
+    const aiSearchForm = document.getElementById('aiSearchForm');
+    if (aiSearchForm) {
+        aiSearchForm.addEventListener('submit', handleAISearchSubmit);
+    }
     
     // Checkbox de dorking
     const dorkingCheckbox = document.getElementById('enable_dorking');
@@ -95,6 +101,27 @@ async function handleSearchSubmit(event) {
     }
     
     await performSearch(searchData);
+}
+
+// Manejar envío del formulario de IA
+async function handleAISearchSubmit(event) {
+    event.preventDefault();
+    if (searchInProgress) {
+        showNotification('Ya hay una búsqueda en progreso. Por favor espere.', 'warning');
+        return;
+    }
+
+    const promptInput = document.getElementById('aiPrompt'); // Asumiendo que el textarea tiene id 'aiPrompt'
+    const prompt = promptInput ? promptInput.value.trim() : '';
+
+    if (!prompt) {
+        showNotification('Por favor, ingresa un prompt para la búsqueda con IA.', 'error');
+        if (promptInput) focusElement('aiPrompt');
+        return;
+    }
+
+    const searchData = { prompt: prompt };
+    await performAISearchRequest(searchData);
 }
 
 // Preparar datos de búsqueda
@@ -439,13 +466,15 @@ function focusElement(elementId) {
 
 function updateSearchButton(button, isSearching) {
     if (!button) return;
-    
+    const defaultText = button.dataset.defaultText || '<i class="fas fa-search"></i> Iniciar Búsqueda';
+    const searchingText = button.dataset.searchingText || '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+
     if (isSearching) {
         button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+        button.innerHTML = searchingText;
     } else {
         button.disabled = false;
-        button.innerHTML = '<i class="fas fa-search"></i> Iniciar Búsqueda';
+        button.innerHTML = defaultText;
     }
 }
 
@@ -550,6 +579,130 @@ function setupResultsEventListeners() {
     // Configurar eventos para resultados si es necesario
     console.log('Configurando eventos para resultados...');
 }
+
+// Realizar búsqueda con IA
+async function performAISearchRequest(searchData) {
+    searchInProgress = true;
+    const resultsSection = document.getElementById('resultsSection'); // El contenedor general de resultados
+    const searchProgress = document.getElementById('searchProgress'); // Barra de progreso
+    const searchResultsContainer = document.getElementById('searchResults'); // Contenedor específico para resultados
+    const aiSearchBtn = document.getElementById('aiSearchBtn'); // Botón de búsqueda IA
+
+    try {
+        showElement(resultsSection); // Asegúrate que la sección de resultados esté visible
+        showElement(searchProgress);
+        if(searchResultsContainer) searchResultsContainer.innerHTML = ''; // Limpiar resultados anteriores
+        if(aiSearchBtn) updateSearchButton(aiSearchBtn, true, 'Procesando con IA...');
+
+        simulateProgress(); // Simular progreso
+
+        const response = await fetch('/api/ai_search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.csrfToken || ''
+            },
+            body: JSON.stringify(searchData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Error HTTP: ${response.status}. ${errorData.error || response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        hideElement(searchProgress);
+        if (result.success) {
+            displayAIResults(result); // Nueva función para mostrar resultados de IA
+            showNotification('Búsqueda con IA completada exitosamente.', 'success');
+        } else {
+            throw new Error(result.error || 'Error desconocido en la búsqueda con IA');
+        }
+
+    } catch (error) {
+        console.error('Error en búsqueda con IA:', error);
+        if(searchProgress) hideElement(searchProgress);
+        if(searchResultsContainer) showErrorResults(error.message); // Mostrar error en el contenedor de resultados
+        showNotification(`Error en IA: ${error.message}`, 'error');
+    } finally {
+        searchInProgress = false;
+        if(aiSearchBtn) updateSearchButton(aiSearchBtn, false, '<i class="fas fa-cogs"></i> Procesar con IA');
+    }
+}
+
+// Mostrar resultados de IA (nueva función)
+function displayAIResults(data) {
+    const searchResultsContainer = document.getElementById('searchResults'); // Usar el mismo contenedor
+    if (!searchResultsContainer) return;
+
+    let html = '';
+
+    // Mostrar Interpretación de IA
+    if (data.interpretation) {
+        html += `
+            <div class="card mb-3 result-card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-lightbulb"></i> Interpretación de IA del Prompt</h5>
+                    <p><strong>Objetivo Principal:</strong> ${data.interpretation.main_target || 'No especificado'}</p>
+                    <p><strong>Tipo de Objetivo:</strong> ${data.interpretation.target_type || 'No especificado'}</p>
+                    <div><strong>Detalles Específicos:</strong> <pre style="white-space: pre-wrap; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">${JSON.stringify(data.interpretation.specific_details, null, 2)}</pre></div>
+                    <p><strong>Información Solicitada:</strong> ${data.interpretation.information_needed ? data.interpretation.information_needed.join(', ') : 'No especificado'}</p>
+                    <p><strong>Sugerencias de Fuentes:</strong> ${data.interpretation.sources_hint ? data.interpretation.sources_hint.join(', ') : 'No especificado'}</p>
+                    <p><strong>Google Dorking Sugerido:</strong> ${data.interpretation.enable_dorking ? 'Sí' : 'No'}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // Mostrar Resumen de IA
+    if (data.summary) {
+        html += `
+            <div class="card mb-3 result-card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-file-alt"></i> Resumen Ejecutivo por IA</h5>
+                    <p style="white-space: pre-wrap;">${escapeHtml(data.summary)}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // Mostrar Muestra de Resultados Crudos
+    if (data.raw_results_sample && data.raw_results_sample.length > 0) {
+        html += '<h5 class="mt-4"><i class="fas fa-list-ul"></i> Muestra de Resultados Crudos Obtenidos</h5>';
+        data.raw_results_sample.forEach((result, index) => {
+            // Reutilizar createResultsListHTML o una versión simplificada
+            const riskBadge = getRiskBadge(result.risk_level);
+            const sourceBadge = getSourceBadge(result.source);
+            html += `
+                <div class="card mb-3 result-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">
+                                <a href="${result.url || '#'}" target="_blank" class="text-decoration-none" rel="noopener noreferrer">
+                                    ${escapeHtml(result.title || 'Sin título')}
+                                    ${result.url ? '<i class="fas fa-external-link-alt ms-1" style="font-size: 0.8em;"></i>' : ''}
+                                </a>
+                            </h6>
+                            <div class="badges">
+                                ${sourceBadge}
+                                ${riskBadge}
+                            </div>
+                        </div>
+                        ${result.url ? `<p class="card-text text-muted small mb-2"><i class="fas fa-link"></i> ${escapeHtml(result.url)}</p>` : ''}
+                        ${result.description ? `<p class="card-text">${escapeHtml(result.description)}</p>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+    } else if (!data.summary && !data.interpretation) {
+         html += '<p class="alert alert-info">No se generó un resumen ni una interpretación detallada por la IA, o no se obtuvieron resultados crudos.</p>';
+    }
+
+    searchResultsContainer.innerHTML = html;
+    animateElement(searchResultsContainer, 'fade-in');
+}
+
 
 function setupTooltips() {
     // Configurar tooltips de Bootstrap si está disponible

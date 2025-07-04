@@ -45,6 +45,7 @@ Una plataforma completa de OSINT (Open Source Intelligence) desarrollada en Pyth
 - **Interfaz web moderna** con dashboard interactivo
 - **APIs integradas**: Shodan, VirusTotal, Censys, SecurityTrails, y más
 - **Arquitectura modular** robusta con manejo de errores avanzado
+- ✨ **Búsqueda Asistida por IA**: Nueva capacidad para interpretar prompts en lenguaje natural, orquestar búsquedas OSINT y generar resúmenes ejecutivos utilizando LLMs (configurable con API Key de OpenAI).
 
 ### 🛠️ Herramientas CLI Integradas
 
@@ -215,8 +216,22 @@ nano osint_config.json
   "censys_api_id": "tu_censys_id",
   "censys_api_secret": "tu_censys_secret",
   "twitter_bearer_token": "tu_twitter_token"
+  // Para la funcionalidad de IA, ver config/ia_config.json
+  // Deberás añadir tu API Key de OpenAI allí.
 }
 ```
+
+### Configuración de IA (`config/ia_config.json`)
+Para la nueva funcionalidad de Búsqueda Asistida por IA, crea/edita el archivo `config/ia_config.json`:
+```json
+{
+  "openai_api_key": "TU_API_KEY_DE_OPENAI_AQUI",
+  "default_model_name": "gpt-3.5-turbo",
+  "temperature": 0.7,
+  "max_tokens": 1500
+}
+```
+**Importante**: Reemplaza `"TU_API_KEY_DE_OPENAI_AQUI"` con tu API Key real de OpenAI. Este archivo está en `.gitignore`.
 
 ## 🖥️ Uso
 
