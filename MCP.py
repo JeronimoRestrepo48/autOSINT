@@ -56,6 +56,7 @@ try:
     AI_CORE_AVAILABLE = True
     print("INFO: Módulo ai_core cargado exitosamente.")
 except ImportError as e:
+    ai_core = None
     AI_CORE_AVAILABLE = False
     print(f"ADVERTENCIA: Módulo ai_core.py no encontrado o con errores de importación: {e}")
     # logging.warning(f"Módulo ai_core.py no encontrado o con errores de importación: {e}")
@@ -1455,6 +1456,10 @@ class FlaskWebInterface:
                 return jsonify({'error': 'El módulo de IA no está disponible.'}), 503
 
             try:
+                # Solo usar ai_core si está disponible
+                if not AI_CORE_AVAILABLE:
+                    return jsonify({'error': 'El módulo de IA no está disponible.'}), 503
+
                 data = request.get_json()
                 user_prompt = data.get('prompt', '').strip()
 
@@ -1467,6 +1472,8 @@ class FlaskWebInterface:
                 logger.info(f"AI Search: Recibido prompt de user_id {user_id}: '{user_prompt}'")
 
                 # 1. Interpretar el prompt
+                if ai_core is None:
+                    return jsonify({'error': 'El módulo de IA no está disponible.'}), 503
                 interpretation = ai_core.interpret_prompt_for_osint(user_prompt)
                 logger.debug(f"AI Search: Interpretación: {interpretation}")
                 if interpretation.get("error"):
@@ -1477,6 +1484,8 @@ class FlaskWebInterface:
 
                 # 2. Orquestar la búsqueda OSINT
                 # La instancia de osint_searcher ya está disponible como self.osint_searcher
+                if ai_core is None:
+                    return jsonify({'error': 'El módulo de IA no está disponible.'}), 503
                 raw_osint_results = ai_core.orchestrate_osint_search(interpretation, self.osint_searcher)
                 logger.debug(f"AI Search: Resultados crudos OSINT: {raw_osint_results[:2]}") # Loguear solo una muestra
 

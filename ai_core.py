@@ -5,237 +5,6 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 from langchain.chains import LLMChain
 
-# Variable global para cachear la configuración
-_ia_config = None
-_llm = None
-
-def load_ia_config():
-    """Carga la configuración de IA desde ia_config.json."""
-    global _ia_config
-    if _ia_config is None:
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'ia_config.json')
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                _ia_config = json.load(f)
-        except FileNotFoundError:
-            print(f"Error: El archivo de configuración de IA no se encontró en {config_path}")
-            _ia_config = {} # Evitar reintentos fallidos
-            return None
-        except json.JSONDecodeError:
-            print(f"Error: El archivo de configuración de IA ({config_path}) no es un JSON válido.")
-            _ia_config = {} # Evitar reintentos fallidos
-            return None
-    return _ia_config
-
-def get_llm():
-    """Inicializa y devuelve el modelo LLM."""
-    global _llm
-    if _llm is None:
-        config = load_ia_config()
-        if not config or config.get("openai_api_key") == "TU_API_KEY_DE_OPENAI_AQUI" or not config.get("openai_api_key"):
-            print("Advertencia: La API key de OpenAI no está configurada en config/ia_config.json. Las funciones de IA no operarán.")
-            return None
-
-        _llm = ChatOpenAI(
-            openai_api_key=config.get("openai_api_key"),
-            model_name=config.get("default_model_name", "gpt-3.5-turbo"),
-            temperature=config.get("temperature", 0.7)
-        )
-    return _llm
-
-def interpret_prompt_for_osint(user_prompt: str) -> dict:
-    """
-    Interpreta el prompt del usuario para extraer la intención, entidades y parámetros
-    para una búsqueda OSINT.
-    """
-    llm = get_llm()
-    if not llm:
-        return {"error": "LLM no inicializado. Verifica la configuración de la API key."}
-
-    template = ChatPromptTemplate.from_messages([
-        ("system", """Eres un asistente experto en OSINT. Tu tarea es analizar el prompt del usuario y extraer la siguiente información en formato JSON:
-        1.  `main_target`: La entidad principal de la investigación (ej. persona, empresa, dominio, IP, tema).
-        2.  `target_type`: El tipo de la entidad principal (ej. 'person', 'company', 'domain', 'ip', 'topic', 'email', 'phone', 'username', 'vehicle', 'general_text').
-        3.  `specific_details`: Un diccionario con detalles adicionales sobre el objetivo (ej. para 'person': {{'full_name': '...', 'email': '...', 'phone': '...'}}; para 'company': {{'nit': '...'}}).
-        4.  `information_needed`: Una lista de los tipos de información que el usuario desea obtener (ej. ['antecedentes judiciales', 'perfiles en redes sociales', 'vulnerabilidades técnicas', 'noticias recientes', 'datos de contacto']).
-        5.  `sources_hint`: Una lista de posibles tipos de fuentes a consultar si el prompt lo sugiere (ej. ['gobierno', 'medios', 'foros', 'dark_web', 'registros_publicos', 'apis_especializadas']).
-        6.  `enable_dorking`: Booleano, true si el usuario sugiere o podría beneficiarse de Google Dorking, de lo contrario false.
-        7.  `output_format_preference`: String, preferencia de formato de reporte si se menciona (ej. 'resumen', 'lista_detallada', 'reporte_formal').
-        8.  `original_prompt`: El prompt original del usuario.
-
-        Ejemplo de prompt: "Investiga a Juan Pérez, correo juan.perez@email.com, y encuentra sus perfiles en redes sociales y cualquier antecedente judicial. Usa dorks si es necesario."
-        Salida JSON esperada:
-        {{
-            "main_target": "Juan Pérez",
-            "target_type": "person",
-            "specific_details": {{"full_name": "Juan Pérez", "email": "juan.perez@email.com"}},
-            "information_needed": ["perfiles en redes sociales", "antecedentes judiciales"],
-            "sources_hint": ["redes_sociales", "gobierno"],
-            "enable_dorking": true,
-            "output_format_preference": "no_especificado",
-            "original_prompt": "Investiga a Juan Pérez, correo juan.perez@email.com, y encuentra sus perfiles en redes sociales y cualquier antecedente judicial. Usa dorks si es necesario."
-        }}
-
-        Si un campo no es identificable, usa un valor por defecto apropiado como "no_especificado" para strings, lista vacía para listas, o false para booleanos.
-        El campo `main_target` debe ser la entidad más específica posible. Si el prompt es sobre "seguridad de example.com", main_target es "example.com" y target_type "domain".
-        Si el prompt es "noticias sobre ciberseguridad en Colombia", main_target es "ciberseguridad en Colombia" y target_type es "topic".
-        Para `target_type`, usa uno de: 'person', 'company', 'domain', 'ip', 'topic', 'email', 'phone', 'username', 'vehicle', 'general_text'.
-        Para `specific_details`, si el target_type es 'person', intenta extraer 'full_name', 'email', 'phone', 'cedula', 'city'.
-        Si es 'company', intenta extraer 'company_name', 'nit', 'city'.
-        Si es 'vehicle', intenta extraer 'plate', 'vehicle_type', 'brand', 'model'.
-        Si es 'contact', intenta extraer 'email', 'phone', 'username', 'domain', 'ip'.
-        Si es 'domain', el main_target es el dominio.
-        Si es 'ip', el main_target es la IP.
-        Si es 'email', el main_target es el email.
-        Si es 'phone', el main_target es el número de teléfono.
-        Si es 'username', el main_target es el nombre de usuario.
-        Si es 'topic' o 'general_text', `specific_details` puede ser un diccionario vacío.
-        Asegúrate de que la salida sea un JSON válido.
-        """),
-        ("human", "{user_prompt}")
-    ])
-
-    chain = LLMChain(llm=llm, prompt=template, output_parser=StrOutputParser())
-
-    try:
-        response_str = chain.invoke({"user_prompt": user_prompt})
-        # Limpiar la respuesta si está envuelta en ```json ... ```
-        if response_str.startswith("```json"):
-            response_str = response_str[7:]
-        if response_str.endswith("```"):
-            response_str = response_str[:-3]
-
-        parsed_json = json.loads(response_str.strip())
-        # Asegurar que todos los campos esperados estén presentes
-        parsed_json.setdefault("main_target", "no_especificado")
-        parsed_json.setdefault("target_type", "general_text")
-        parsed_json.setdefault("specific_details", {})
-        parsed_json.setdefault("information_needed", [])
-        parsed_json.setdefault("sources_hint", [])
-        parsed_json.setdefault("enable_dorking", False)
-        parsed_json.setdefault("output_format_preference", "no_especificado")
-        parsed_json["original_prompt"] = user_prompt # Siempre añadir el prompt original
-        return parsed_json
-    except json.JSONDecodeError as e:
-        print(f"Error al decodificar JSON de la respuesta del LLM: {e}")
-        print(f"Respuesta recibida: {response_str}")
-        return {"error": "Error al decodificar la respuesta del LLM.", "raw_response": response_str}
-    except Exception as e:
-        print(f"Error inesperado al interpretar el prompt: {e}")
-        return {"error": f"Error inesperado: {str(e)}"}
-
-def generate_osint_report_summary(search_results: list, user_prompt: str, interpretation: dict) -> str:
-    """
-    Genera un resumen narrativo de los resultados OSINT utilizando un LLM.
-    """
-    llm = get_llm()
-    if not llm:
-        return "Error: LLM no inicializado. Verifica la configuración de la API key."
-
-    # Preparamos una versión simplificada de los resultados para el prompt
-    # Limitamos la cantidad de datos para no exceder el límite de tokens del LLM
-    simplified_results = []
-    for result in search_results[:20]: # Tomar solo los primeros 20 resultados para el resumen
-        title = result.get('title', 'N/A')
-        source = result.get('source', 'N/A')
-        description = result.get('description', '')
-        if description and len(description) > 150: # Acortar descripciones largas
-            description = description[:150] + "..."
-        simplified_results.append(f"- Título: {title}, Fuente: {source}, Descripción: {description}")
-
-    results_str = "\n".join(simplified_results)
-    if not simplified_results:
-        results_str = "No se encontraron resultados significativos."
-
-    template = ChatPromptTemplate.from_messages([
-        ("system", f"""Eres un analista OSINT experto. Has realizado una investigación basada en el siguiente prompt del usuario:
-        '{user_prompt}'
-
-        La interpretación del prompt fue:
-        - Objetivo Principal: {interpretation.get('main_target')}
-        - Tipo de Objetivo: {interpretation.get('target_type')}
-        - Detalles Específicos: {interpretation.get('specific_details')}
-        - Información Requerida: {interpretation.get('information_needed')}
-
-        Y has obtenido los siguientes hallazgos (primeros 20 o menos):
-        {results_str}
-
-        Por favor, redacta un resumen ejecutivo conciso y coherente de los hallazgos.
-        El resumen debe:
-        1.  Comenzar mencionando brevemente el objetivo de la investigación.
-        2.  Destacar los puntos más relevantes encontrados en relación a lo que el usuario solicitó.
-        3.  Si hay información sensible o de alto riesgo, mencionarla con cautela.
-        4.  Si no se encontró información relevante para alguna de las solicitudes, indicarlo.
-        5.  Concluir con una breve valoración general de los hallazgos.
-        6.  Mantén un tono profesional y objetivo. No inventes información que no esté en los resultados.
-        7.  El resumen no debe exceder los 300-400 tokens.
-        """),
-        ("human", "Genera el resumen ejecutivo de la investigación.")
-    ])
-
-    chain = LLMChain(llm=llm, prompt=template, output_parser=StrOutputParser())
-
-    try:
-        summary = chain.invoke({}) # No necesita input adicional ya que todo está en el system prompt
-        return summary
-    except Exception as e:
-        print(f"Error al generar el resumen del reporte: {e}")
-        return f"Error al generar el resumen: {str(e)}"
-
-# Funciones de orquestación (a desarrollar en el siguiente paso)
-# def orchestrate_osint_search(interpretation: dict) -> list:
-#     """
-#     Orquesta las búsquedas OSINT basadas en la interpretación del prompt.
-#     Esta función llamará a los módulos de búsqueda existentes en MCP.py.
-#     """
-#     # Lógica para mapear interpretación a llamadas de funciones de MCP.py
-#     # Por ejemplo:
-#     # if interpretation['target_type'] == 'domain':
-#     #     results = osint_searcher.search(interpretation['main_target'], search_type='domain', ...)
-#     # ...
-#     print(f"Orquestación basada en: {interpretation}")
-#     # Simulación por ahora
-#     return [{"title": "Resultado simulado", "description": "Esto es una simulación de orquestación.", "source": "ai_orchestrator"}]
-
-
-if __name__ == '__main__':
-    # Pruebas rápidas (requiere que config/ia_config.json esté configurado)
-    print("Probando la carga de configuración...")
-    config = load_ia_config()
-    if config and config.get("openai_api_key") != "TU_API_KEY_DE_OPENAI_AQUI":
-        print("Configuración cargada.")
-
-        print("\nProbando interpretación de prompt...")
-        # test_prompt = "Investiga a la empresa 'Soluciones Tech SAS' con NIT 800.123.456-7 en Bogotá. Quiero saber sobre sus registros comerciales y noticias recientes. Usa dorks."
-        test_prompt_person = "Busca información sobre Ana López, email ana.lopez@example.com, teléfono 3001234567. Necesito sus perfiles en redes sociales y antecedentes."
-        # interpretation_result = interpret_prompt_for_osint(test_prompt)
-        interpretation_result_person = interpret_prompt_for_osint(test_prompt_person)
-        # print("Interpretación Empresa:")
-        # print(json.dumps(interpretation_result, indent=2))
-        print("\nInterpretación Persona:")
-        print(json.dumps(interpretation_result_person, indent=2))
-
-        if interpretation_result_person and "error" not in interpretation_result_person :
-            print("\nProbando generación de resumen...")
-            dummy_results = [
-                {"title": "Perfil de Ana López en LinkedIn", "source": "linkedin", "description": "Ana López, especialista en marketing digital con 5 años de experiencia."},
-                {"title": "Mención de Ana López en foro de tecnología", "source": "foro_tech", "description": "Ana López comentó sobre las nuevas tendencias en IA."},
-                {"title": "No se encontraron antecedentes judiciales para Ana López", "source": "simulacion_antecedentes", "description": "Búsqueda en bases de datos públicas no arrojó resultados."}
-            ]
-            summary = generate_osint_report_summary(dummy_results, test_prompt_person, interpretation_result_person)
-            print("Resumen Generado:")
-            print(summary)
-    else:
-        print("No se pudo cargar la configuración de IA o la API key no está configurada. Saltando pruebas.")
-
-```python
-import json
-import os
-from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema.output_parser import StrOutputParser
-from langchain.chains import LLMChain
-
 # Importar EnhancedOSINTSearcher de MCP (ajustar la ruta si es necesario)
 # Esto podría causar un problema de importación circular si ai_core es importado por MCP.py directamente.
 # Se manejará con cuidado en la integración. Por ahora, para la estructura del módulo:
@@ -278,8 +47,8 @@ def get_llm():
             return None
 
         _llm = ChatOpenAI(
-            openai_api_key=config.get("openai_api_key"),
-            model_name=config.get("default_model_name", "gpt-3.5-turbo"),
+            api_key=config.get("openai_api_key"),
+            model=config.get("default_model_name", "gpt-3.5-turbo"),
             temperature=config.get("temperature", 0.7)
         )
     return _llm
@@ -368,6 +137,7 @@ def interpret_prompt_for_osint(user_prompt: str) -> dict:
 
     chain = LLMChain(llm=llm, prompt=template, output_parser=StrOutputParser())
 
+    response_str = ""
     try:
         response_str = chain.invoke({"user_prompt": user_prompt})
         if response_str.startswith("```json"):
@@ -628,4 +398,3 @@ if __name__ == '__main__':
                  print("\nResumen de resultados orquestados (dominio):\n", summary_orchestrated)
 
     print("\nPruebas de ai_core.py finalizadas.")
-```
