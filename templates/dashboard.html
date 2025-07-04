@@ -1,0 +1,1059 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Control - OSINT Searcher{% endblock %}
+
+{% block content %}
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #42a5f5 0%, #478ed1 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="3" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .nav-breadcrumb {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .nav-breadcrumb a {
+            color: white;
+            text-decoration: none;
+            margin-right: 15px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        .nav-breadcrumb a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .stat-icon {
+            font-size: 3.5em;
+            margin-right: 25px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-content h4 {
+            font-size: 2.5em;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 700;
+        }
+
+        .stat-content p {
+            color: #666;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .wide-card {
+            grid-column: 1 / -1;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .full-width-section {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .sources-section {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-weight: bold;
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.3em;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .search-list, .report-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .search-item, .report-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: background 0.3s;
+        }
+
+        .search-item:hover, .report-item:hover {
+            background: #e9ecef;
+        }
+
+        .search-info h4, .report-info h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .search-info p, .report-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            transform: translateY(-2px);
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .action-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .action-icon {
+            font-size: 3em;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .action-content h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .action-content p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            transition: background 0.3s;
+            z-index: 1000;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+
+        .osint-sources {
+            margin-top: 10px;
+        }
+
+        .source-category {
+            margin-bottom: 20px;
+        }
+
+        .source-category h5 {
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .source-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .source-link {
+            display: inline-block;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            color: #495057;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            border: 1px solid #dee2e6;
+        }
+
+        .source-link:hover {
+            background: #e9ecef;
+            color: #212529;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .source-link.official {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .source-link.official:hover {
+            background: #c3e6cb;
+            color: #0c3d20;
+        }
+
+        .source-link.judicial {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+
+        .source-link.judicial:hover {
+            background: #ffeaa7;
+            color: #533f03;
+        }
+
+        .source-link.academic {
+            background: #cce5ff;
+            border-color: #99ccff;
+            color: #0066cc;
+        }
+
+        .source-link.academic:hover {
+            background: #99ccff;
+            color: #004499;
+        }
+
+        .source-link.media {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .source-link.media:hover {
+            background: #f5c6cb;
+            color: #491217;
+        }
+
+        .source-link.business {
+            background: #e2e3e5;
+            border-color: #d6d8db;
+            color: #383d41;
+        }
+
+        .source-link.business:hover {
+            background: #d6d8db;
+            color: #202326;
+        }
+
+        .source-category h5 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .source-category ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .source-category li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .source-category li:before {
+            content: "•";
+            color: #667eea;
+            position: absolute;
+            left: 0;
+        }
+
+        .text-muted {
+            color: #6c757d;
+        }
+
+        /* Mejoras para los gráficos */
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        .chart-container canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .header p {
+                font-size: 1em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .card-body {
+                padding: 15px;
+            }
+            
+            .stat-card {
+                padding: 20px;
+            }
+        }
+    </style>
+
+    <a href="{{ url_for('logout') }}" class="logout-btn">
+        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+    </a>
+
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> Panel de Control OSINT</h1>
+            <p>Bienvenido de vuelta, {{ session.username }}!</p>
+        </div>
+
+        <div class="nav-breadcrumb">
+            <a href="{{ url_for('search_page') }}"><i class="fas fa-search"></i> Nueva Búsqueda</a>
+            <a href="{{ url_for('history') }}"><i class="fas fa-history"></i> Historial</a>
+            <a href="{{ url_for('reports') }}"><i class="fas fa-file-alt"></i> Reportes</a>
+            <a href="{{ url_for('profile') }}"><i class="fas fa-user"></i> Perfil</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ stats.high_risk_findings if stats else 0 }}</h4>
+                    <p>Hallazgos de Alto Riesgo</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ stats.medium_risk_findings if stats else 0 }}</h4>
+                    <p>Hallazgos de Riesgo Medio</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ stats.low_risk_findings if stats else 0 }}</h4>
+                    <p>Hallazgos de Bajo Riesgo</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ stats.total_searches if stats else 0 }}</h4>
+                    <p>Búsquedas Realizadas</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-clock"></i> Búsquedas Recientes</h3>
+                </div>
+                <div class="card-body">
+                    {% if recent_searches %}
+                        <div class="search-list">
+                            {% for search in recent_searches %}
+                                <div class="search-item">
+                                    <div class="search-info">
+                                        <h4>{{ search.query }}</h4>
+                                        <p>Tipo: {{ search.search_type }} | Fecha: {{ search.timestamp.strftime('%d/%m/%Y %H:%M') }}</p>
+                                    </div>
+                                    <div class="search-actions">
+                                        <a href="{{ url_for('view_search_results', search_id=search.id) }}" class="btn">
+                                            <i class="fas fa-eye"></i> Ver Resultados
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No hay búsquedas recientes disponibles.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-chart-line"></i> Estadísticas de Actividad</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-chart-pie"></i> Distribución de Riesgos</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-globe-americas"></i> Búsquedas por Región</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="regionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-file-alt"></i> Configuraciones de Reportes</h3>
+                </div>
+                <div class="card-body">
+                    {% if report_configs %}
+                        <div class="report-list">
+                            {% for config in report_configs %}
+                                <div class="report-item">
+                                    <div class="report-info">
+                                        <h4>{{ config.name }}</h4>
+                                        <p>{{ config.description }}</p>
+                                    </div>
+                                    <div class="report-actions">
+                                        <a href="{{ url_for('generate_report', config_id=config.id) }}" class="btn">
+                                            <i class="fas fa-play"></i> Ejecutar
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No hay configuraciones de reportes disponibles.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-map-marked-alt"></i> Fuentes OSINT Colombia</h3>
+                </div>
+                <div class="card-body">
+                    <div class="osint-sources">
+                        <div class="source-category">
+                            <h5>🏛️ Entidades Gubernamentales</h5>
+                            <div class="source-links">
+                                <a href="https://www.procuraduria.gov.co/portal/Consulta-de-Antecedentes.page" class="source-link official" target="_blank" rel="noopener">Procuraduría General</a>
+                                <a href="https://www.contraloria.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Contraloría General</a>
+                                <a href="https://www.fiscalia.gov.co/colombia/consultas-publicas/" class="source-link official" target="_blank" rel="noopener">Fiscalía General</a>
+                                <a href="https://www.policia.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Policía Nacional</a>
+                                <a href="https://www.registraduria.gov.co/consulta-cedula" class="source-link official" target="_blank" rel="noopener">Registraduría Nacional</a>
+                                <a href="https://www.runt.com.co/consulta-ciudadano" class="source-link official" target="_blank" rel="noopener">RUNT</a>
+                                <a href="https://www.dian.gov.co/atencionciudadano/consultas/Paginas/default.aspx" class="source-link official" target="_blank" rel="noopener">DIAN</a>
+                                <a href="https://www.migracioncolombia.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Migración Colombia</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>⚖️ Sistema Judicial</h5>
+                            <div class="source-links">
+                                <a href="https://consultaprocesos.ramajudicial.gov.co/" class="source-link judicial" target="_blank" rel="noopener">Rama Judicial</a>
+                                <a href="https://www.notariado.org/liferay/consultas" class="source-link judicial" target="_blank" rel="noopener">Superintendencia de Notariado</a>
+                                <a href="https://www.supernotariado.gov.co/rnec/" class="source-link judicial" target="_blank" rel="noopener">RNEC</a>
+                                <a href="https://www.consejosuperiordelajudicatura.gov.co/consultas" class="source-link judicial" target="_blank" rel="noopener">Consejo Superior de la Judicatura</a>
+                                <a href="https://www.defensoria.gov.co/consultas" class="source-link judicial" target="_blank" rel="noopener">Defensoría del Pueblo</a>
+                                <a href="https://www.inpec.gov.co/consultas" class="source-link judicial" target="_blank" rel="noopener">INPEC</a>
+                                <a href="https://www.ministeriopublico.gov.co/consultas" class="source-link judicial" target="_blank" rel="noopener">Ministerio Público</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>🏢 Registros Empresariales</h5>
+                            <div class="source-links">
+                                <a href="https://www.supersociedades.gov.co/consultas" class="source-link business" target="_blank" rel="noopener">Superintendencia de Sociedades</a>
+                                <a href="https://www.ccb.org.co/consultas" class="source-link business" target="_blank" rel="noopener">Cámara de Comercio de Bogotá</a>
+                                <a href="https://www.camaramedellin.com.co/consultas" class="source-link business" target="_blank" rel="noopener">Cámara de Comercio de Medellín</a>
+                                <a href="https://www.ccc.org.co/consultas" class="source-link business" target="_blank" rel="noopener">Cámara de Comercio de Cali</a>
+                                <a href="https://www.camarabaq.org.co/consultas" class="source-link business" target="_blank" rel="noopener">Cámara de Comercio de Barranquilla</a>
+                                <a href="https://www.superfinanciera.gov.co/consultas" class="source-link business" target="_blank" rel="noopener">Superintendencia Financiera</a>
+                                <a href="https://www.sic.gov.co/consultas-marcas" class="source-link business" target="_blank" rel="noopener">SIC - Marcas</a>
+                                <a href="https://www.supersolidaria.gov.co/consultas" class="source-link business" target="_blank" rel="noopener">Superintendencia de Economía Solidaria</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>🎓 Instituciones Académicas</h5>
+                            <div class="source-links">
+                                <a href="https://www.mineducacion.gov.co/sistemasdeinformacion/1735/w3-propertyname-2672.html" class="source-link academic" target="_blank" rel="noopener">MinEducación - SNIES</a>
+                                <a href="https://www.icfes.gov.co/consultas" class="source-link academic" target="_blank" rel="noopener">ICFES</a>
+                                <a href="https://www.colciencias.gov.co/consultas" class="source-link academic" target="_blank" rel="noopener">Minciencias</a>
+                                <a href="https://scienti.minciencias.gov.co/cvlac/visualizador/generarCurriculoCv.do" class="source-link academic" target="_blank" rel="noopener">CvLAC</a>
+                                <a href="https://www.conaces.gov.co/consultas" class="source-link academic" target="_blank" rel="noopener">CONACES</a>
+                                <a href="https://www.cna.gov.co/consultas" class="source-link academic" target="_blank" rel="noopener">CNA</a>
+                                <a href="https://www.icetex.gov.co/consultas" class="source-link academic" target="_blank" rel="noopener">ICETEX</a>
+                                <a href="https://www.colfuturo.org/consultas" class="source-link academic" target="_blank" rel="noopener">Colfuturo</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>🏥 Salud y Profesiones</h5>
+                            <div class="source-links">
+                                <a href="https://www.minsalud.gov.co/salud/rethus" class="source-link official" target="_blank" rel="noopener">RETHUS</a>
+                                <a href="https://www.cnm.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Consejo Nacional de Medicina</a>
+                                <a href="https://www.consejodepsicologia.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Consejo de Psicología</a>
+                                <a href="https://www.cnoa.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Consejo Nacional de Odontología</a>
+                                <a href="https://www.consejoenfermeria.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Consejo de Enfermería</a>
+                                <a href="https://www.copnia.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">COPNIA</a>
+                                <a href="https://www.cna.gov.co/consultas-profesionales" class="source-link official" target="_blank" rel="noopener">Arquitectos</a>
+                                <a href="https://www.cnca.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Contadores</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>📺 Medios de Comunicación</h5>
+                            <div class="source-links">
+                                <a href="https://www.eltiempo.com/buscar/" class="source-link media" target="_blank" rel="noopener">El Tiempo</a>
+                                <a href="https://www.elespectador.com/buscar/" class="source-link media" target="_blank" rel="noopener">El Espectador</a>
+                                <a href="https://www.semana.com/buscar/" class="source-link media" target="_blank" rel="noopener">Semana</a>
+                                <a href="https://www.caracol.com.co/buscar/" class="source-link media" target="_blank" rel="noopener">Caracol Radio</a>
+                                <a href="https://www.rcnradio.com/buscar/" class="source-link media" target="_blank" rel="noopener">RCN Radio</a>
+                                <a href="https://www.bluradio.com/buscar/" class="source-link media" target="_blank" rel="noopener">Blu Radio</a>
+                                <a href="https://www.elheraldo.co/buscar/" class="source-link media" target="_blank" rel="noopener">El Heraldo</a>
+                                <a href="https://www.eluniversal.com.co/buscar/" class="source-link media" target="_blank" rel="noopener">El Universal</a>
+                                <a href="https://www.elpais.com.co/buscar/" class="source-link media" target="_blank" rel="noopener">El País</a>
+                                <a href="https://www.elcolombiano.com/buscar/" class="source-link media" target="_blank" rel="noopener">El Colombiano</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>🚗 Transporte y Movilidad</h5>
+                            <div class="source-links">
+                                <a href="https://www.runt.com.co/consulta-ciudadano" class="source-link official" target="_blank" rel="noopener">RUNT</a>
+                                <a href="https://www.transito.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Secretarías de Tránsito</a>
+                                <a href="https://www.mintransporte.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">MinTransporte</a>
+                                <a href="https://www.transmilenio.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">TransMilenio</a>
+                                <a href="https://www.aerocivil.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Aerocivil</a>
+                                <a href="https://www.anla.gov.co/consultas-transporte" class="source-link official" target="_blank" rel="noopener">ANLA</a>
+                                <a href="https://www.invias.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">INVÍAS</a>
+                                <a href="https://www.ani.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">ANI</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>🏠 Propiedad y Catastro</h5>
+                            <div class="source-links">
+                                <a href="https://www.supernotariado.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Superintendencia de Notariado</a>
+                                <a href="https://www.igac.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">IGAC</a>
+                                <a href="https://www.catastrobogota.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Catastro Bogotá</a>
+                                <a href="https://www.medellin.gov.co/catastro" class="source-link official" target="_blank" rel="noopener">Catastro Medellín</a>
+                                <a href="https://www.cali.gov.co/hacienda/catastro" class="source-link official" target="_blank" rel="noopener">Catastro Cali</a>
+                                <a href="https://www.lonja.org.co/consultas" class="source-link business" target="_blank" rel="noopener">Lonja de Propiedad Raíz</a>
+                                <a href="https://www.metrocuadrado.com" class="source-link business" target="_blank" rel="noopener">Mercado Inmobiliario</a>
+                                <a href="https://www.fincaraiz.com.co" class="source-link business" target="_blank" rel="noopener">Finca Raíz</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>💼 Empleo y Recursos Humanos</h5>
+                            <div class="source-links">
+                                <a href="https://www.serviciodeempleo.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Servicio de Empleo</a>
+                                <a href="https://www.mintrabajo.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">MinTrabajo</a>
+                                <a href="https://www.linkedin.com/search/people" class="source-link business" target="_blank" rel="noopener">LinkedIn</a>
+                                <a href="https://www.computrabajo.com.co" class="source-link business" target="_blank" rel="noopener">CompuTrabajo</a>
+                                <a href="https://www.elempleo.com" class="source-link business" target="_blank" rel="noopener">ElEmpleo</a>
+                                <a href="https://www.indeed.com.co" class="source-link business" target="_blank" rel="noopener">Indeed</a>
+                                <a href="https://www.laborum.com" class="source-link business" target="_blank" rel="noopener">Laborum</a>
+                                <a href="https://www.glassdoor.com.co" class="source-link business" target="_blank" rel="noopener">Glassdoor</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>🔍 Bases de Datos Especializadas</h5>
+                            <div class="source-links">
+                                <a href="https://www.datos.gov.co" class="source-link official" target="_blank" rel="noopener">Datos Abiertos Colombia</a>
+                                <a href="https://www.dane.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">DANE</a>
+                                <a href="https://www.banrep.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Banco de la República</a>
+                                <a href="https://www.dnp.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">DNP</a>
+                                <a href="https://www.suin-juriscol.gov.co" class="source-link official" target="_blank" rel="noopener">SUIN-JURISCOL</a>
+                                <a href="https://www.funcionpublica.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Función Pública</a>
+                                <a href="https://www.sigep.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">SIGEP</a>
+                                <a href="https://www.contratacionestado.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">SECOP</a>
+                            </div>
+                        </div>
+                        
+                        <div class="source-category">
+                            <h5>🛡️ Seguridad y Defensa</h5>
+                            <div class="source-links">
+                                <a href="https://www.mindefensa.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">MinDefensa</a>
+                                <a href="https://www.ejercito.mil.co/consultas" class="source-link official" target="_blank" rel="noopener">Ejército Nacional</a>
+                                <a href="https://www.armada.mil.co/consultas" class="source-link official" target="_blank" rel="noopener">Armada Nacional</a>
+                                <a href="https://www.fac.mil.co/consultas" class="source-link official" target="_blank" rel="noopener">Fuerza Aérea</a>
+                                <a href="https://www.policia.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">Policía Nacional</a>
+                                <a href="https://www.dijin.policia.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">DIJIN</a>
+                                <a href="https://www.unc.gov.co/consultas" class="source-link official" target="_blank" rel="noopener">UNC</a>
+                                <a href="https://www.reintegra.org.co/consultas" class="source-link official" target="_blank" rel="noopener">ARN</a>
+                            </div>
+                        </div>
+                        </div>
+                        <div class="source-category">
+                            <h5><i class="fas fa-users"></i> Redes Sociales y Profesionales</h5>
+                            <ul>
+                                <li><a href="https://www.linkedin.com" target="_blank" rel="noopener">LinkedIn Colombia</a></li>
+                                <li><a href="https://www.facebook.com" target="_blank" rel="noopener">Facebook</a></li>
+                                <li><a href="https://www.instagram.com" target="_blank" rel="noopener">Instagram</a></li>
+                                <li><a href="https://twitter.com" target="_blank" rel="noopener">Twitter/X</a></li>
+                                <li><a href="https://www.computrabajo.com.co" target="_blank" rel="noopener">CompuTrabajo</a></li>
+                                <li><a href="https://www.elempleo.com" target="_blank" rel="noopener">ElEmpleo.com</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-grid">
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-user-search"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Búsqueda de Personas</h3>
+                    <p>Buscar información de personas en Colombia</p>
+                    <a href="{{ url_for('search_page') }}?type=person" class="btn">Buscar Persona</a>
+                </div>
+            </div>
+
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-newspaper"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Búsqueda en Noticias</h3>
+                    <p>Buscar en medios de comunicación colombianos</p>
+                    <a href="{{ url_for('search_page') }}?type=news" class="btn">Buscar Noticias</a>
+                </div>
+            </div>
+
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Búsqueda Empresarial</h3>
+                    <p>Información de empresas y sociedades</p>
+                    <a href="{{ url_for('search_page') }}?type=business" class="btn">Buscar Empresa</a>
+                </div>
+            </div>
+
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-university"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Fuentes Gubernamentales</h3>
+                    <p>Buscar en registros oficiales</p>
+                    <a href="{{ url_for('search_page') }}?type=government" class="btn">Buscar Oficial</a>
+                </div>
+            </div>
+
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Búsqueda Avanzada</h3>
+                    <p>Múltiples fuentes y técnicas OSINT</p>
+                    <a href="{{ url_for('search_page') }}?type=advanced" class="btn">Búsqueda Avanzada</a>
+                </div>
+            </div>
+
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Historial</h3>
+                    <p>Revisar búsquedas anteriores</p>
+                    <a href="{{ url_for('history') }}" class="btn">Ver Historial</a>
+                </div>
+            </div>
+
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Reportes</h3>
+                    <p>Generar informes detallados</p>
+                    <a href="{{ url_for('reports') }}" class="btn">Crear Reporte</a>
+                </div>
+            </div>
+
+            <div class="action-card">
+                <div class="action-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div class="action-content">
+                    <h3>Configuración</h3>
+                    <p>Ajustar parámetros del sistema</p>
+                    <a href="{{ url_for('profile') }}" class="btn">Configurar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://kit.fontawesome.com/your-kit-id.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Datos del servidor -->
+    <script type="application/json" id="dashboard-data">
+        {
+            "stats": {
+                "high_risk": {{ stats.high_risk_findings|default(0) }},
+                "medium_risk": {{ stats.medium_risk_findings|default(0) }},
+                "low_risk": {{ stats.low_risk_findings|default(0) }}
+            }
+        }
+    </script>
+
+    <script>
+        // Obtener datos del servidor
+        let dashboardData;
+        try {
+            dashboardData = JSON.parse(document.getElementById('dashboard-data').textContent);
+        } catch (error) {
+            console.error('Error parsing dashboard data:', error);
+            dashboardData = { stats: { high_risk: 0, medium_risk: 0, low_risk: 0 } };
+        }
+
+        // Gráfico de actividad por días
+        const activityCtx = document.getElementById('activityChart').getContext('2d');
+        const activityChart = new Chart(activityCtx, {
+            type: 'line',
+            data: {
+                labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+                datasets: [{
+                    label: 'Búsquedas',
+                    data: [0, 0, 0, 0, 0, 0, 0], // Datos reales se cargarán via API
+                    borderColor: 'rgb(102, 126, 234)',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Gráfico de distribución de riesgos
+        const riskCtx = document.getElementById('riskChart').getContext('2d');
+        const riskChart = new Chart(riskCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Alto Riesgo', 'Medio Riesgo', 'Bajo Riesgo'],
+                datasets: [{
+                    data: [
+                        dashboardData.stats.high_risk || 0,
+                        dashboardData.stats.medium_risk || 0,
+                        dashboardData.stats.low_risk || 0
+                    ],
+                    backgroundColor: [
+                        '#ff4757',
+                        '#ffa502',
+                        '#26de81'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Gráfico de búsquedas por región
+        const regionCtx = document.getElementById('regionChart').getContext('2d');
+        const regionChart = new Chart(regionCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Otros'],
+                datasets: [{
+                    label: 'Búsquedas',
+                    data: [0, 0, 0, 0, 0], // Datos reales se cargarán via API
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgb(102, 126, 234)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Actualizar gráficos con datos reales
+        function updateCharts() {
+            fetch('/api/dashboard/stats')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Actualizar gráfico de actividad
+                        if (data.activity_data && Array.isArray(data.activity_data)) {
+                            activityChart.data.datasets[0].data = data.activity_data;
+                            activityChart.update();
+                        }
+                        
+                        // Actualizar gráfico de riesgos
+                        if (data.risk_stats) {
+                            riskChart.data.datasets[0].data = [
+                                data.risk_stats.high || 0,
+                                data.risk_stats.medium || 0,
+                                data.risk_stats.low || 0
+                            ];
+                            riskChart.update();
+                        }
+                        
+                        // Actualizar gráfico de regiones
+                        if (data.region_data && Array.isArray(data.region_data)) {
+                            regionChart.data.datasets[0].data = data.region_data;
+                            regionChart.update();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating charts:', error);
+                    // Silently fail to avoid disrupting the user experience
+                });
+        }
+
+        // Actualizar gráficos cada 30 segundos
+        setInterval(updateCharts, 30000);
+        
+        // Actualizar gráficos al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(updateCharts, 1000);
+        });
+    </script>
+{% endblock %}

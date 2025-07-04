@@ -1,0 +1,77 @@
+# Dependencias básicas existentes
+requests>=2.28.0
+beautifulsoup4>=4.11.0
+schedule>=1.2.0
+
+# Flask y componentes web
+flask>=2.3.0
+flask-login>=0.6.2
+flask-mail>=0.9.1
+flask-wtf>=1.1.1
+wtforms>=3.0.1
+jinja2>=3.1.2
+werkzeug>=2.3.0
+
+# Base de datos
+sqlalchemy>=2.0.0
+flask-sqlalchemy>=3.0.0
+alembic>=1.11.0
+
+# Autenticación y seguridad
+flask-bcrypt>=1.0.1
+pyjwt>=2.7.0
+python-jose>=3.3.0
+cryptography>=41.0.0
+
+# Manejo de tareas y programación
+apscheduler>=3.10.0
+celery>=5.3.0
+redis>=4.5.0
+
+# Análisis y visualización
+plotly>=5.14.0
+pandas>=1.5.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+wordcloud>=1.9.0
+networkx>=3.1.0
+
+# Archivos y reportes
+aiofiles>=23.1.0
+openpyxl>=3.1.0
+reportlab>=4.0.0
+python-docx>=0.8.11
+markdown>=3.4.0
+
+# Herramientas OSINT básicas
+dnspython>=2.3.0
+python-whois>=0.8.0
+ipwhois>=1.2.0
+censys>=2.2.0
+shodan>=1.29.0
+instaloader>=4.9.0
+selenium>=4.9.0
+tweepy>=4.14.0
+googletrans>=4.0.0
+textblob>=0.17.0
+vt-py>=0.17.0
+tldextract>=3.4.0
+python-dateutil>=2.8.0
+pytz>=2023.3
+
+# Nuevas herramientas OSINT
+waybackpy>=3.0.6
+phonenumbers>=8.13.13
+yfinance>=0.2.20
+newspaper3k>=0.2.8
+geopy>=2.3.0
+python-nmap>=0.7.1
+paramiko>=3.2.0
+pymetasploit3>=1.0.3
+GitPython>=3.1.31
+pycvesearch>=1.2
+pysafebrowsing>=0.1.1
+pycrtsh>=0.1.1
+passivetotal>=2.5.9
+otxv2>=1.2.0
+

@@ -1,0 +1,1493 @@
+{% extends "base.html" %}
+
+{% block title %}Búsqueda OSINT - OSINT Searcher{% endblock %}
+
+{% block content %}
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .search-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .search-form {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .search-form h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4fc3f7;
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .search-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: #4fc3f7;
+            background: rgba(79, 195, 247, 0.1);
+        }
+
+        .tab-btn.active {
+            color: #4fc3f7;
+            border-bottom-color: #4fc3f7;
+            background: rgba(79, 195, 247, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #29b6f6 0%, #4fc3f7 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .results-header {
+            background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+            color: white;
+            padding: 20px;
+            font-weight: bold;
+        }
+
+        .results-header h3 {
+            margin: 0;
+            font-size: 1.3em;
+        }
+
+        .results-body {
+            padding: 20px;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4fc3f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .summary-card h4 {
+            font-size: 2em;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .summary-card p {
+            color: #666;
+            margin: 0;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .result-card h5 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .result-card h5 a {
+            color: #4fc3f7;
+            text-decoration: none;
+        }
+
+        .result-card h5 a:hover {
+            text-decoration: underline;
+        }
+
+        .result-card p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .result-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+            color: #888;
+        }
+
+        .risk-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .risk-high {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .risk-medium {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .risk-low {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            transition: background 0.3s;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .no-results i {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #ccc;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .search-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .back-btn {
+                position: static;
+                display: block;
+                width: fit-content;
+                margin-bottom: 20px;
+            }
+        }
+
+        .search-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: #4fc3f7;
+            background: rgba(79, 195, 247, 0.1);
+        }
+
+        .tab-btn.active {
+            color: #4fc3f7;
+            border-bottom-color: #4fc3f7;
+            background: rgba(79, 195, 247, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+    </style>
+
+<a href="{{ url_for('dashboard') }}" class="back-btn">
+    <i class="fas fa-arrow-left"></i> Volver al Dashboard
+</a>
+
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-search"></i> Búsqueda OSINT</h1>
+        <p>Herramientas avanzadas de investigación e inteligencia</p>
+    </div>
+
+    <div class="search-container">
+        <div class="search-form">
+            <h2><i class="fas fa-cogs"></i> Configuración de Búsqueda OSINT</h2>
+            
+            <!-- Pestañas para diferentes tipos de búsqueda -->
+            <div class="search-tabs">
+                <button class="tab-btn active" onclick="showTab('general')">General</button>
+                <button class="tab-btn" onclick="showTab('person')">Personas</button>
+                <button class="tab-btn" onclick="showTab('business')">Empresas</button>
+                <button class="tab-btn" onclick="showTab('vehicle')">Vehículos</button>
+                <button class="tab-btn" onclick="showTab('contact')">Contactos</button>
+                <button class="tab-btn" onclick="showTab('news')">Noticias</button>
+                <button class="tab-btn" onclick="showTab('government')">Gubernamental</button>
+            </div>
+
+            <!-- Búsqueda General -->
+            <div id="generalTab" class="tab-content active">
+                <form id="searchForm">
+                    <div class="form-group">
+                        <label for="query">Término de Búsqueda:</label>
+                        <input type="text" id="query" name="query" placeholder="Ingresa tu consulta..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="searchType">Tipo de Búsqueda:</label>
+                        <select id="searchType" name="searchType">
+                            <option value="basic">Búsqueda Básica</option>
+                            <option value="advanced">Búsqueda Avanzada</option>
+                            <option value="domain">Análisis de Dominio</option>
+                            <option value="ip">Análisis de IP</option>
+                            <option value="email">Análisis de Email</option>
+                            <option value="social">Redes Sociales</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sources">Fuentes de Información:</label>
+                        <select id="sources" name="sources" multiple>
+                            <option value="google">Google</option>
+                            <option value="bing">Bing</option>
+                            <option value="shodan">Shodan</option>
+                            <option value="virustotal">VirusTotal</option>
+                            <option value="have_i_been_pwned">Have I Been Pwned</option>
+                            <option value="whois">WHOIS</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="enableDorking" name="enableDorking">
+                            <label for="enableDorking">Habilitar Google Dorking</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn" id="searchBtn">
+                        <i class="fas fa-search"></i> Iniciar Búsqueda
+                    </button>
+                </form>
+            </div>
+
+            <!-- Búsqueda de Personas -->
+            <div id="personTab" class="tab-content">
+                <form id="personSearchForm">
+                    <div class="form-section">
+                        <h4>Datos Personales</h4>
+                        <div class="form-group">
+                            <label for="personName">Nombres:</label>
+                            <input type="text" id="personName" name="personName" placeholder="Nombres completos" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="personLastName">Apellidos:</label>
+                            <input type="text" id="personLastName" name="personLastName" placeholder="Apellidos completos" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="personId">Número de Identificación:</label>
+                            <input type="text" id="personId" name="personId" placeholder="Cédula de ciudadanía (opcional)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="personEmail">Correo Electrónico:</label>
+                            <input type="email" id="personEmail" name="personEmail" placeholder="email@ejemplo.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="personPhone">Teléfono:</label>
+                            <input type="text" id="personPhone" name="personPhone" placeholder="Número de teléfono (opcional)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="personCity">Ciudad:</label>
+                            <select id="personCity" name="personCity">
+                                <option value="">Selecciona una ciudad</option>
+                                <option value="bogota">Bogotá</option>
+                                <option value="medellin">Medellín</option>
+                                <option value="cali">Cali</option>
+                                <option value="barranquilla">Barranquilla</option>
+                                <option value="cartagena">Cartagena</option>
+                                <option value="bucaramanga">Bucaramanga</option>
+                                <option value="manizales">Manizales</option>
+                                <option value="pereira">Pereira</option>
+                                <option value="cucuta">Cúcuta</option>
+                                <option value="ibague">Ibagué</option>
+                                <option value="pasto">Pasto</option>
+                                <option value="monteria">Montería</option>
+                                <option value="villavicencio">Villavicencio</option>
+                                <option value="neiva">Neiva</option>
+                                <option value="popayan">Popayán</option>
+                                <option value="valledupar">Valledupar</option>
+                                <option value="santa_marta">Santa Marta</option>
+                                <option value="tunja">Tunja</option>
+                                <option value="armenia">Armenia</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>Datos Específicos (opcional)</h4>
+                        <div class="form-group">
+                            <label for="personProfession">Profesión:</label>
+                            <input type="text" id="personProfession" name="personProfession" placeholder="Profesión u ocupación">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="personUniversity">Universidad:</label>
+                            <input type="text" id="personUniversity" name="personUniversity" placeholder="Universidad de estudios">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="personCompany">Empresa:</label>
+                            <input type="text" id="personCompany" name="personCompany" placeholder="Empresa donde trabaja">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="personLinkedin">LinkedIn:</label>
+                            <input type="url" id="personLinkedin" name="personLinkedin" placeholder="https://linkedin.com/in/usuario">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>Fuentes a consultar:</h4>
+                        <div class="checkbox-grid">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchMedia" name="searchSources" value="media" checked>
+                                <label for="searchMedia">Medios de Comunicación</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchSocial" name="searchSources" value="social" checked>
+                                <label for="searchSocial">Redes Sociales</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchAcademic" name="searchSources" value="academic">
+                                <label for="searchAcademic">Bases de Datos Académicas</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchCommercial" name="searchSources" value="commercial">
+                                <label for="searchCommercial">Registros Comerciales</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchJudicial" name="searchSources" value="judicial">
+                                <label for="searchJudicial">Antecedentes Judiciales</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchProfessional" name="searchSources" value="professional">
+                                <label for="searchProfessional">Registros Profesionales</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-user-search"></i> Buscar Persona
+                    </button>
+                </form>
+            </div>
+
+            <!-- Búsqueda de Empresas -->
+            <div id="businessTab" class="tab-content">
+                <form id="businessSearchForm">
+                    <div class="form-group">
+                        <label for="businessName">Nombre de la Empresa:</label>
+                        <input type="text" id="businessName" name="businessName" placeholder="Razón social o nombre comercial" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="businessNIT">NIT:</label>
+                        <input type="text" id="businessNIT" name="businessNIT" placeholder="Número de identificación tributaria (opcional)">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="businessCity">Ciudad:</label>
+                        <select id="businessCity" name="businessCity">
+                            <option value="">Selecciona una ciudad</option>
+                            <option value="bogota">Bogotá</option>
+                            <option value="medellin">Medellín</option>
+                            <option value="cali">Cali</option>
+                            <option value="barranquilla">Barranquilla</option>
+                            <option value="cartagena">Cartagena</option>
+                            <option value="bucaramanga">Bucaramanga</option>
+                            <option value="manizales">Manizales</option>
+                            <option value="pereira">Pereira</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fuentes a consultar:</label>
+                        <div class="checkbox-grid">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchSupersociedades" name="businessSources" value="supersociedades" checked>
+                                <label for="searchSupersociedades">Superintendencia de Sociedades</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchChamber" name="businessSources" value="chamber" checked>
+                                <label for="searchChamber">Cámara de Comercio</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchBusinessMedia" name="businessSources" value="media" checked>
+                                <label for="searchBusinessMedia">Medios de Comunicación</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchSanctions" name="businessSources" value="sanctions" checked>
+                                <label for="searchSanctions">Sanciones y Multas</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-building"></i> Buscar Empresa
+                    </button>
+                </form>
+            </div>
+
+            <!-- Búsqueda de Vehículos -->
+            <div id="vehicleTab" class="tab-content">
+                <form id="vehicleSearchForm">
+                    <div class="form-section">
+                        <h4>Datos del Vehículo</h4>
+                        <div class="form-group">
+                            <label for="vehiclePlate">Placa:</label>
+                            <input type="text" id="vehiclePlate" name="vehiclePlate" placeholder="ABC123 (formato colombiano)" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vehicleType">Tipo de Vehículo:</label>
+                            <select id="vehicleType" name="vehicleType">
+                                <option value="">Seleccionar tipo</option>
+                                <option value="particular">Particular</option>
+                                <option value="publico">Público</option>
+                                <option value="oficial">Oficial</option>
+                                <option value="diplomatico">Diplomático</option>
+                                <option value="motocicleta">Motocicleta</option>
+                                <option value="camion">Camión</option>
+                                <option value="remolque">Remolque</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vehicleCity">Ciudad de Matrícula:</label>
+                            <select id="vehicleCity" name="vehicleCity">
+                                <option value="">Seleccionar ciudad</option>
+                                <option value="bogota">Bogotá</option>
+                                <option value="medellin">Medellín</option>
+                                <option value="cali">Cali</option>
+                                <option value="barranquilla">Barranquilla</option>
+                                <option value="cartagena">Cartagena</option>
+                                <option value="bucaramanga">Bucaramanga</option>
+                                <option value="manizales">Manizales</option>
+                                <option value="pereira">Pereira</option>
+                                <option value="cucuta">Cúcuta</option>
+                                <option value="ibague">Ibagué</option>
+                                <option value="pasto">Pasto</option>
+                                <option value="monteria">Montería</option>
+                                <option value="villavicencio">Villavicencio</option>
+                                <option value="neiva">Neiva</option>
+                                <option value="popayan">Popayán</option>
+                                <option value="valledupar">Valledupar</option>
+                                <option value="santa_marta">Santa Marta</option>
+                                <option value="tunja">Tunja</option>
+                                <option value="armenia">Armenia</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vehicleBrand">Marca (opcional):</label>
+                            <input type="text" id="vehicleBrand" name="vehicleBrand" placeholder="Chevrolet, Toyota, etc.">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vehicleModel">Modelo (opcional):</label>
+                            <input type="text" id="vehicleModel" name="vehicleModel" placeholder="Aveo, Corolla, etc.">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>Fuentes a consultar:</h4>
+                        <div class="checkbox-grid">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchRUNT" name="vehicleSources" value="runt" checked>
+                                <label for="searchRUNT">RUNT (Registro Único Nacional de Tránsito)</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchTransito" name="vehicleSources" value="transito" checked>
+                                <label for="searchTransito">Secretarías de Tránsito</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchComparendos" name="vehicleSources" value="comparendos" checked>
+                                <label for="searchComparendos">Comparendos</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchVehicleMedia" name="vehicleSources" value="media">
+                                <label for="searchVehicleMedia">Medios de Comunicación</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchVehicleTheft" name="vehicleSources" value="theft">
+                                <label for="searchVehicleTheft">Reportes de Hurto</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchVehicleAccidents" name="vehicleSources" value="accidents">
+                                <label for="searchVehicleAccidents">Accidentes de Tránsito</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-car"></i> Buscar Vehículo
+                    </button>
+                </form>
+            </div>
+
+            <!-- Búsqueda de Contactos -->
+            <div id="contactTab" class="tab-content">
+                <form id="contactSearchForm">
+                    <div class="form-section">
+                        <h4>Datos de Contacto</h4>
+                        <div class="form-group">
+                            <label for="contactEmail">Correo Electrónico:</label>
+                            <input type="email" id="contactEmail" name="contactEmail" placeholder="ejemplo@dominio.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contactPhone">Número de Teléfono:</label>
+                            <input type="text" id="contactPhone" name="contactPhone" placeholder="3001234567 (sin espacios)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contactUsername">Usuario de Redes Sociales:</label>
+                            <input type="text" id="contactUsername" name="contactUsername" placeholder="@usuario">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contactDomain">Dominio Web:</label>
+                            <input type="text" id="contactDomain" name="contactDomain" placeholder="ejemplo.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contactIP">Dirección IP:</label>
+                            <input type="text" id="contactIP" name="contactIP" placeholder="192.168.1.1">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>Fuentes a consultar:</h4>
+                        <div class="checkbox-grid">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchBreaches" name="contactSources" value="breaches" checked>
+                                <label for="searchBreaches">Bases de Datos Filtradas</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchSocialMedia" name="contactSources" value="social_media" checked>
+                                <label for="searchSocialMedia">Redes Sociales</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchDomainInfo" name="contactSources" value="domain_info">
+                                <label for="searchDomainInfo">Información de Dominio</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchPhoneDir" name="contactSources" value="phone_dir">
+                                <label for="searchPhoneDir">Directorios Telefónicos</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchEmailValid" name="contactSources" value="email_valid">
+                                <label for="searchEmailValid">Validación de Email</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="searchSpamLists" name="contactSources" value="spam_lists">
+                                <label for="searchSpamLists">Listas de Spam</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-address-book"></i> Buscar Contacto
+                    </button>
+                </form>
+            </div>
+
+            <!-- Búsqueda en Noticias -->
+            <div id="newsTab" class="tab-content">
+                <form id="newsSearchForm">
+                    <div class="form-group">
+                        <label for="newsQuery">Término de Búsqueda:</label>
+                        <input type="text" id="newsQuery" name="newsQuery" placeholder="Palabras clave para buscar en noticias" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newsRegion">Región de Interés:</label>
+                        <select id="newsRegion" name="newsRegion">
+                            <option value="">Todo el país</option>
+                            <option value="antioquia">Antioquia</option>
+                            <option value="cundinamarca">Cundinamarca</option>
+                            <option value="valle">Valle del Cauca</option>
+                            <option value="atlantico">Atlántico</option>
+                            <option value="bolivar">Bolívar</option>
+                            <option value="santander">Santander</option>
+                            <option value="caldas">Caldas</option>
+                            <option value="risaralda">Risaralda</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newsTimeRange">Período de Búsqueda:</label>
+                        <select id="newsTimeRange" name="newsTimeRange">
+                            <option value="7">Última semana</option>
+                            <option value="30" selected>Último mes</option>
+                            <option value="90">Últimos 3 meses</option>
+                            <option value="365">Último año</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Medios a consultar:</label>
+                        <div class="checkbox-grid">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="elTiempo" name="mediaSources" value="el_tiempo" checked>
+                                <label for="elTiempo">El Tiempo</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="elEspectador" name="mediaSources" value="el_espectador" checked>
+                                <label for="elEspectador">El Espectador</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="semana" name="mediaSources" value="semana" checked>
+                                <label for="semana">Semana</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="caracolRadio" name="mediaSources" value="caracol_radio" checked>
+                                <label for="caracolRadio">Caracol Radio</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="rcnRadio" name="mediaSources" value="rcn_radio" checked>
+                                <label for="rcnRadio">RCN Radio</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="bluRadio" name="mediaSources" value="blu_radio">
+                                <label for="bluRadio">Blu Radio</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-newspaper"></i> Buscar Noticias
+                    </button>
+                </form>
+            </div>
+
+            <!-- Búsqueda Gubernamental -->
+            <div id="governmentTab" class="tab-content">
+                <form id="governmentSearchForm">
+                    <div class="form-group">
+                        <label for="govQuery">Término de Búsqueda:</label>
+                        <input type="text" id="govQuery" name="govQuery" placeholder="Nombre, empresa o término a buscar" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="govRecordType">Tipo de Registro:</label>
+                        <select id="govRecordType" name="govRecordType">
+                            <option value="all">Todos los registros</option>
+                            <option value="procuraduria">Procuraduría (Sanciones Disciplinarias)</option>
+                            <option value="contraloria">Contraloría (Responsabilidad Fiscal)</option>
+                            <option value="fiscalia">Fiscalía (Procesos Penales)</option>
+                            <option value="policia">Policía Nacional</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Entidades a consultar:</label>
+                        <div class="checkbox-grid">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="registraduria" name="govSources" value="registraduria">
+                                <label for="registraduria">Registraduría Nacional</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="runt" name="govSources" value="runt">
+                                <label for="runt">RUNT</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="procuraduria" name="govSources" value="procuraduria" checked>
+                                <label for="procuraduria">Procuraduría General</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="contraloria" name="govSources" value="contraloria" checked>
+                                <label for="contraloria">Contraloría General</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="fiscalia" name="govSources" value="fiscalia" checked>
+                                <label for="fiscalia">Fiscalía General</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="policia" name="govSources" value="policia">
+                                <label for="policia">Policía Nacional</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="fas fa-university"></i> Buscar Registros
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="results-container">
+            <div class="results-header">
+                <h3><i class="fas fa-list"></i> Resultados de Búsqueda</h3>
+            </div>
+            <div class="results-body">
+                <div id="loadingSpinner" class="loading-spinner hidden">
+                    <div class="spinner"></div>
+                    <p>Realizando búsqueda OSINT...</p>
+                </div>
+
+                <div id="searchResults" class="hidden">
+                    <div class="results-summary">
+                        <div class="summary-card">
+                            <h4 id="totalResults">0</h4>
+                            <p>Total de Resultados</p>
+                        </div>
+                        <div class="summary-card">
+                            <h4 id="highRiskResults">0</h4>
+                            <p>Alto Riesgo</p>
+                        </div>
+                        <div class="summary-card">
+                            <h4 id="executionTime">0s</h4>
+                            <p>Tiempo de Ejecución</p>
+                        </div>
+                    </div>
+
+                    <div id="resultsContainer">
+                        <!-- Los resultados aparecerán aquí -->
+                    </div>
+                </div>
+
+                <div id="noResults" class="no-results">
+                    <i class="fas fa-search"></i>
+                    <h4>Sin resultados</h4>
+                    <p>Configura tu búsqueda y presiona "Iniciar Búsqueda"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://kit.fontawesome.com/your-kit-id.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Función para mostrar pestañas
+function showTab(tabName) {
+    // Ocultar todas las pestañas
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(tab => tab.classList.remove('active'));
+    
+    // Remover clase active de todos los botones
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => btn.classList.remove('active'));
+    
+    // Mostrar la pestaña seleccionada
+    document.getElementById(tabName + 'Tab').classList.add('active');
+    
+    // Agregar clase active al botón correspondiente
+    event.target.classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const searchResults = document.getElementById('searchResults');
+    const noResults = document.getElementById('noResults');
+
+    // Manejar búsqueda general
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        performGeneralSearch();
+    });
+
+    // Manejar búsqueda de personas
+    document.getElementById('personSearchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        performPersonSearch();
+    });
+
+    // Manejar búsqueda de empresas
+    document.getElementById('businessSearchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        performBusinessSearch();
+    });
+
+    // Manejar búsqueda de noticias
+    document.getElementById('newsSearchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        performNewsSearch();
+    });
+
+    // Manejar búsqueda gubernamental
+    document.getElementById('governmentSearchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        performGovernmentSearch();
+    });
+
+    function performGeneralSearch() {
+        const query = document.getElementById('query').value.trim();
+        const searchType = document.getElementById('searchType').value;
+        const enableDorking = document.getElementById('enableDorking').checked;
+        
+        if (!query) {
+            alert('Por favor ingresa un término de búsqueda');
+            return;
+        }
+
+        showLoading();
+        
+        const requestData = {
+            query: query,
+            search_type: searchType,
+            enable_dorking: enableDorking
+        };
+
+        performApiCall('/api/search', requestData);
+    }
+
+    function performPersonSearch() {
+        const nombre = document.getElementById('personName').value.trim();
+        const apellido = document.getElementById('personLastName').value.trim();
+        const cedula = document.getElementById('personId').value.trim();
+        const ciudad = document.getElementById('personCity').value;
+        const telefono = document.getElementById('personPhone').value.trim();
+        
+        if (!nombre || !apellido) {
+            alert('Por favor ingresa al menos nombres y apellidos');
+            return;
+        }
+
+        showLoading();
+        
+        const requestData = {
+            search_type: 'person',
+            nombre: nombre,
+            apellido: apellido,
+            cedula: cedula,
+            ciudad: ciudad,
+            telefono: telefono,
+            sources: getSelectedSources('searchSources')
+        };
+
+        performApiCall('/api/search/person', requestData);
+    }
+
+    function performBusinessSearch() {
+        const nombre = document.getElementById('businessName').value.trim();
+        const nit = document.getElementById('businessNIT').value.trim();
+        const ciudad = document.getElementById('businessCity').value;
+        
+        if (!nombre) {
+            alert('Por favor ingresa el nombre de la empresa');
+            return;
+        }
+
+        showLoading();
+        
+        const requestData = {
+            search_type: 'business',
+            nombre_empresa: nombre,
+            nit: nit,
+            ciudad: ciudad,
+            sources: getSelectedSources('businessSources')
+        };
+
+        performApiCall('/api/search/business', requestData);
+    }
+
+    function performNewsSearch() {
+        const query = document.getElementById('newsQuery').value.trim();
+        const region = document.getElementById('newsRegion').value;
+        const timeRange = document.getElementById('newsTimeRange').value;
+        
+        if (!query) {
+            alert('Por favor ingresa términos para buscar en noticias');
+            return;
+        }
+
+        showLoading();
+        
+        const requestData = {
+            search_type: 'news',
+            query: query,
+            region: region,
+            days_back: parseInt(timeRange),
+            sources: getSelectedSources('mediaSources')
+        };
+
+        performApiCall('/api/search/news', requestData);
+    }
+
+    function performGovernmentSearch() {
+        const query = document.getElementById('govQuery').value.trim();
+        const recordType = document.getElementById('govRecordType').value;
+        
+        if (!query) {
+            alert('Por favor ingresa un término para buscar en registros gubernamentales');
+            return;
+        }
+
+        showLoading();
+        
+        const requestData = {
+            search_type: 'government',
+            query: query,
+            record_type: recordType,
+            sources: getSelectedSources('govSources')
+        };
+
+        performApiCall('/api/search/government', requestData);
+    }
+
+    function getSelectedSources(sourceName) {
+        const checkboxes = document.querySelectorAll(`input[name="${sourceName}"]:checked`);
+        return Array.from(checkboxes).map(checkbox => checkbox.value);
+    }
+
+    function showLoading() {
+        loadingSpinner.classList.remove('hidden');
+        searchResults.classList.add('hidden');
+        noResults.classList.add('hidden');
+    }
+
+    function hideLoading() {
+        loadingSpinner.classList.add('hidden');
+    }
+
+    function performApiCall(endpoint, requestData) {
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+
+            if (data.success) {
+                displayResults(data.data);
+            } else {
+                alert('Error en la búsqueda: ' + data.error);
+                noResults.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            hideLoading();
+            alert('Error de conexión: ' + error.message);
+            noResults.style.display = 'block';
+        });
+    }
+
+    function displayResults(data) {
+        if (!data || (data.total_results !== undefined && data.total_results === 0) || 
+            (data.findings && data.findings.length === 0) || 
+            (data.articles && data.articles.length === 0)) {
+            noResults.style.display = 'block';
+            return;
+        }
+
+        // Actualizar resumen
+        const totalResults = data.total_results || data.findings?.length || data.articles?.length || 0;
+        document.getElementById('totalResults').textContent = totalResults;
+        
+        let highRiskCount = 0;
+        if (data.results) {
+            highRiskCount = data.results.filter(r => r.risk_level === 'high').length;
+        } else if (data.risk_level === 'high') {
+            highRiskCount = 1;
+        }
+        document.getElementById('highRiskResults').textContent = highRiskCount;
+        
+        const executionTime = data.execution_time || 0;
+        document.getElementById('executionTime').textContent = executionTime.toFixed(2) + 's';
+
+        // Mostrar resultados
+        const container = document.getElementById('resultsContainer');
+        container.innerHTML = '';
+
+        // Diferentes tipos de resultados según el tipo de búsqueda
+        if (data.results) {
+            // Resultados de búsqueda general
+            data.results.forEach((result, index) => {
+                const resultCard = createGeneralResultCard(result, index);
+                container.appendChild(resultCard);
+            });
+        } else if (data.findings) {
+            // Resultados de búsqueda específica (persona, empresa, gobierno)
+            createSpecializedResults(container, data);
+        } else if (data.articles) {
+            // Resultados de búsqueda de noticias
+            data.articles.forEach((article, index) => {
+                const articleCard = createNewsResultCard(article, index);
+                container.appendChild(articleCard);
+            });
+        }
+
+        searchResults.style.display = 'block';
+    }
+
+    function createGeneralResultCard(result, index) {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        
+        const riskClass = `risk-${result.risk_level}`;
+        
+        card.innerHTML = `
+            <h5>
+                <a href="${result.url}" target="_blank" rel="noopener noreferrer">
+                    ${result.title || 'Sin título'}
+                </a>
+            </h5>
+            <p>${result.description || 'Sin descripción'}</p>
+            <div class="result-meta">
+                <span><i class="fas fa-globe"></i> ${result.source}</span>
+                <span class="risk-badge ${riskClass}">${result.risk_level}</span>
+            </div>
+        `;
+        
+        return card;
+    }
+
+    function createNewsResultCard(article, index) {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        
+        card.innerHTML = `
+            <h5>
+                <a href="${article.url}" target="_blank" rel="noopener noreferrer">
+                    ${article.title || 'Sin título'}
+                </a>
+            </h5>
+            <p>${article.content || 'Sin contenido'}</p>
+            <div class="result-meta">
+                <span><i class="fas fa-newspaper"></i> ${article.source}</span>
+                <span><i class="fas fa-calendar"></i> ${new Date(article.timestamp).toLocaleDateString()}</span>
+            </div>
+        `;
+        
+        return card;
+    }
+
+    function createSpecializedResults(container, data) {
+        // Crear resumen de la búsqueda
+        const summaryCard = document.createElement('div');
+        summaryCard.className = 'result-card';
+        summaryCard.innerHTML = `
+            <h5><i class="fas fa-info-circle"></i> Resumen de la Búsqueda</h5>
+            <p><strong>Consulta:</strong> ${data.query}</p>
+            <p><strong>Nivel de Riesgo:</strong> <span class="risk-badge risk-${data.risk_level}">${data.risk_level}</span></p>
+            <p><strong>Fuentes Consultadas:</strong> ${Object.keys(data.sources || {}).length}</p>
+            <p><strong>Hallazgos:</strong> ${data.findings ? data.findings.length : 0}</p>
+        `;
+        container.appendChild(summaryCard);
+
+        // Mostrar hallazgos
+        if (data.findings && data.findings.length > 0) {
+            data.findings.forEach((finding, index) => {
+                const findingCard = document.createElement('div');
+                findingCard.className = 'result-card';
+                findingCard.innerHTML = `
+                    <h5><i class="fas fa-search"></i> ${finding.description}</h5>
+                    <p><strong>Fuente:</strong> ${finding.source}</p>
+                    ${finding.url ? `<p><a href="${finding.url}" target="_blank">Ver fuente</a></p>` : ''}
+                    <div class="result-meta">
+                        <span><i class="fas fa-clock"></i> ${new Date(finding.timestamp).toLocaleString()}</span>
+                        <span><i class="fas fa-tag"></i> ${finding.type}</span>
+                    </div>
+                `;
+                container.appendChild(findingCard);
+            });
+        }
+
+        // Mostrar detalles por fuente
+        if (data.sources) {
+            Object.entries(data.sources).forEach(([sourceName, sourceData]) => {
+                if (sourceData && (Array.isArray(sourceData) ? sourceData.length > 0 : Object.keys(sourceData).length > 0)) {
+                    const sourceCard = document.createElement('div');
+                    sourceCard.className = 'result-card';
+                    sourceCard.innerHTML = `
+                        <h5><i class="fas fa-database"></i> Resultados de ${sourceName.replace('_', ' ').toUpperCase()}</h5>
+                        <p>${JSON.stringify(sourceData, null, 2).substring(0, 200)}...</p>
+                        <div class="result-meta">
+                            <span><i class="fas fa-info"></i> Fuente específica</span>
+                        </div>
+                    `;
+                    container.appendChild(sourceCard);
+                }
+            });
+        }
+    }
+
+    // Verificar parámetros URL para autocompletado
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchType = urlParams.get('type');
+    const searchQuery = urlParams.get('query');
+    
+    if (searchType) {
+        showTab(searchType);
+    }
+    
+    if (searchQuery) {
+        document.getElementById('query').value = searchQuery;
+    }
+});
+</script>
+
+// Función para manejar búsquedas
+function performSearch() {
+    const query = document.getElementById('searchInput').value;
+    const searchType = document.getElementById('searchType').value;
+    
+    if (!query) {
+        alert('Por favor ingresa un término de búsqueda');
+        return;
+    }
+    
+    const loadingDiv = document.getElementById('loadingResults');
+    const resultsDiv = document.getElementById('searchResults');
+    const noResults = document.getElementById('noResults');
+    const searchBtn = document.getElementById('searchBtn');
+    
+    // Mostrar loading
+    loadingDiv.style.display = 'block';
+    resultsDiv.innerHTML = '';
+    noResults.style.display = 'none';
+    searchBtn.disabled = true;
+    
+    // Realizar búsqueda
+    fetch('/api/search', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            query: query,
+            search_type: searchType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        loadingDiv.style.display = 'none';
+        searchBtn.disabled = false;
+        
+        if (data.success && data.results && data.results.length > 0) {
+            displayResults(data.results);
+        } else {
+            noResults.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        loadingDiv.style.display = 'none';
+        searchBtn.disabled = false;
+        alert('Error de conexión: ' + error.message);
+        noResults.style.display = 'block';
+    });
+}
+
+    function displayResults(data) {
+        const noResults = document.getElementById('noResults');
+        const searchResults = document.getElementById('searchResults');
+        
+        if (data.total_results === 0) {
+            noResults.style.display = 'block';
+            return;
+        }
+
+        // Actualizar resumen
+        document.getElementById('totalResults').textContent = data.total_results;
+        document.getElementById('highRiskResults').textContent = 
+            data.results.filter(r => r.risk_level === 'high').length;
+        document.getElementById('executionTime').textContent = 
+            (data.execution_time || 0).toFixed(2) + 's';
+
+        // Mostrar resultados
+        const container = document.getElementById('resultsContainer');
+        container.innerHTML = '';
+
+        data.results.forEach((result, index) => {
+            const resultCard = createResultCard(result, index);
+            container.appendChild(resultCard);
+        });
+
+        searchResults.style.display = 'block';
+    }
+
+    function createResultCard(result, index) {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        
+        const riskClass = `risk-${result.risk_level}`;
+        
+        card.innerHTML = `
+            <h5>
+                <a href="${result.url}" target="_blank" rel="noopener noreferrer">
+                    ${result.title || 'Sin título'}
+                </a>
+            </h5>
+            <p>${result.description || 'Sin descripción'}</p>
+            <div class="result-meta">
+                <span><i class="fas fa-globe"></i> ${result.source}</span>
+                <span class="risk-badge ${riskClass}">${result.risk_level}</span>
+            </div>
+        `;
+        
+        return card;
+    }
+
+    // Función para mostrar u ocultar pestañas
+    window.showTab = function(tabId) {
+        const tabs = document.querySelectorAll('.tab-content');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+
+        tabs.forEach(tab => {
+            tab.classList.remove('active');
+        });
+
+        tabButtons.forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        document.getElementById(tabId + 'Tab').classList.add('active');
+        document.querySelector('.tab-btn[onclick="showTab(\'' + tabId + '\')"]').classList.add('active');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{
+  "email_smtp_server": "smtp.gmail.com",
+  "email_smtp_port": 587,
+  "email_username": "jeronimorestrepo48@gmail.com",
+  "email_password": "jerorepo0228",
+  "email_recipients": [
+    "jeronimorestrepo48@gmail.com"
+  ],
+  "report_time": "08:00",
+  "max_results_per_source": 20,
+  "enable_deep_search": true,
+  "search_engines": [
+    "google",
+    "bing",
+    "duckduckgo",
+    "yandex"
+  ],
+  
+  "_comment_apis": "APIs opcionales para servicios especializados",
+  "shodan_api_key": "9eS9e49MkQWx8klLFki55UqggFR53SgA",
+  "censys_api_id": "",
+  "censys_api_secret": "",
+  "virustotal_api_key": "99c816a944acbaf63e159878061d9bfa09a078ceb081d504460c7dec4eecc42f",
+  "twitter_bearer_token": "AAAAAAAAAAAAAAAAAAAAAKSZ2wEAAAAATQoJCyLVYUZX8uigXHjnrmJwPpQ%3DLiPn1DqT1OzXtjAWvyNpvVuqOtJF0uLyZrgcQHSsgnXxMidkCQ",
+  "telegram_bot_token": "",
+  "discord_bot_token": "MTM5MDUxMzI4MzM0NTI4OTMyOA.GEK7LD.8r81OcIqGRVYxUMRdn7EFsISgrLBqcQkDQTois",
+  
+  "_comment_web": "Configuración de la interfaz web",
+  "web_interface_enabled": true,
+  "web_port": 5001,
+  "web_host": "localhost",
+  "web_auth_enabled": true,
+  "web_username": "admin",
+  "web_password": "Mentesenpaz2014.",
+  "secret_key": "osint-server-secret-key-2025",
+  
+  "_comment_reports": "Configuración de reportes",
+  "export_formats": [
+    "html",
+    "pdf", 
+    "xlsx",
+    "csv"
+  ],
+  "include_charts": true,
+  "include_wordcloud": true,
+  "include_network_graph": true,
+  
+  "_comment_features": "Configuración de búsquedas especializadas",
+  "enable_domain_analysis": true,
+  "enable_ip_analysis": true,
+  "enable_social_media_search": true,
+  "enable_dark_web_search": false,
+  "enable_image_search": true,
+  "enable_news_search": true,
+  
+  "_comment_limits": "Límites y timeouts",
+  "request_timeout": 30,
+  "max_concurrent_requests": 10,
+  "rate_limit_delay": 1.0
+}

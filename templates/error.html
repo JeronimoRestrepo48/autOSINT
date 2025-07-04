@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Error - OSINT Platform{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-4x text-warning mb-3"></i>
+                    <h2>Oops! Algo salió mal</h2>
+                    <p class="text-muted">Se ha producido un error interno del servidor.</p>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                        <i class="fas fa-home"></i> Volver al Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - OSINT Searcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .nav-breadcrumb {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-breadcrumb a {
+            color: white;
+            text-decoration: none;
+            margin-right: 10px;
+        }
+
+        .nav-breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .stat-card.users {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .stat-card.searches {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+        }
+
+        .stat-card.reports {
+            background: linear-gradient(135deg, #0be881 0%, #00d2ff 100%);
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .system-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .info-value {
+            color: #666;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: white;
+        }
+
+        .status-online {
+            background: #0be881;
+        }
+
+        .status-offline {
+            background: #ff6b6b;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #0be881, #00d2ff);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #feca57, #ff9ff3);
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #dc3545;
+        }
+
+        .alert-info {
+            background: #cce7ff;
+            color: #0c5460;
+            border-color: #17a2b8;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffc107;
+        }
+
+        .logs-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.9em;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .log-timestamp {
+            color: #888;
+        }
+
+        .log-level-INFO {
+            color: #00ff00;
+        }
+
+        .log-level-WARNING {
+            color: #ffff00;
+        }
+
+        .log-level-ERROR {
+            color: #ff0000;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .maintenance-notice {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .maintenance-notice h3 {
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Panel de Administración</h1>
+            <p>Gestión completa del sistema OSINT - Bienvenido {{ user.full_name or user.username }}</p>
+        </div>
+
+        <div class="nav-breadcrumb">
+            <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a> > 
+            <a href="{{ url_for('admin') }}">⚙️ Administración</a>
+        </div>
+
+        <div class="alert alert-warning">
+            <strong>⚠️ Panel de Administración</strong><br>
+            Tienes acceso completo al sistema. Usa estas herramientas con precaución.
+        </div>
+
+        <!-- Estadísticas del sistema -->
+        <div class="stats-grid">
+            <div class="stat-card users">
+                <div class="stat-number">{{ total_users }}</div>
+                <div class="stat-label">👥 Usuarios Registrados</div>
+            </div>
+            <div class="stat-card searches">
+                <div class="stat-number">{{ total_searches }}</div>
+                <div class="stat-label">🔍 Búsquedas Realizadas</div>
+            </div>
+            <div class="stat-card reports">
+                <div class="stat-number">{{ total_reports }}</div>
+                <div class="stat-label">📊 Reportes Configurados</div>
+            </div>
+        </div>
+
+        <div class="admin-grid">
+            <!-- Información del sistema -->
+            <div class="card">
+                <h2>💻 Estado del Sistema</h2>
+                
+                <div class="system-info">
+                    <div class="info-row">
+                        <div class="info-label">🖥️ Servidor</div>
+                        <div class="info-value">
+                            <span class="status-badge status-online">En línea</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-row">
+                        <div class="info-label">🗄️ Base de Datos</div>
+                        <div class="info-value">
+                            <span class="status-badge status-online">Conectada</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-row">
+                        <div class="info-label">🔍 Servicios OSINT</div>
+                        <div class="info-value">
+                            <span class="status-badge status-online">Funcionando</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-row">
+                        <div class="info-label">📧 Email</div>
+                        <div class="info-value">
+                            <span class="status-badge status-offline">Pendiente Config</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions-grid">
+                    <button class="btn btn-success" onclick="checkSystemHealth()">
+                        🔄 Verificar Estado
+                    </button>
+                    <button class="btn btn-warning" onclick="restartServices()">
+                        🔃 Reiniciar Servicios
+                    </button>
+                    <button class="btn btn-danger" onclick="maintenanceMode()">
+                        🛠️ Modo Mantenimiento
+                    </button>
+                </div>
+            </div>
+
+            <!-- Gestión de usuarios -->
+            <div class="card">
+                <h2>👥 Gestión de Usuarios</h2>
+                
+                <div class="alert alert-info">
+                    <strong>📊 Resumen de Usuarios</strong><br>
+                    Total: {{ total_users }} usuarios registrados<br>
+                    Activos: {{ total_users }} usuarios activos
+                </div>
+
+                <div class="actions-grid">
+                    <button class="btn" onclick="viewAllUsers()">
+                        👁️ Ver Todos
+                    </button>
+                    <button class="btn btn-success" onclick="createUser()">
+                        ➕ Crear Usuario
+                    </button>
+                    <button class="btn btn-warning" onclick="exportUsers()">
+                        📤 Exportar Lista
+                    </button>
+                    <button class="btn btn-danger" onclick="bulkUserActions()">
+                        🔧 Acciones Masivas
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs del sistema -->
+        <div class="card">
+            <h2>📋 Logs del Sistema</h2>
+            
+            <div class="logs-container" id="systemLogs">
+                <div class="log-entry">
+                    <span class="log-timestamp">[2025-01-07 15:30:45]</span>
+                    <span class="log-level-INFO">[INFO]</span>
+                    Sistema OSINT iniciado correctamente
+                </div>
+                <div class="log-entry">
+                    <span class="log-timestamp">[2025-01-07 15:30:46]</span>
+                    <span class="log-level-INFO">[INFO]</span>
+                    Base de datos conectada - {{ total_users }} usuarios cargados
+                </div>
+                <div class="log-entry">
+                    <span class="log-timestamp">[2025-01-07 15:30:47]</span>
+                    <span class="log-level-INFO">[INFO]</span>
+                    Interfaz web iniciada en puerto 5000
+                </div>
+                <div class="log-entry">
+                    <span class="log-timestamp">[2025-01-07 15:30:48]</span>
+                    <span class="log-level-INFO">[INFO]</span>
+                    Módulos OSINT cargados correctamente
+                </div>
+                <div class="log-entry">
+                    <span class="log-timestamp">[2025-01-07 15:30:49]</span>
+                    <span class="log-level-WARNING">[WARNING]</span>
+                    Configuración de email pendiente
+                </div>
+                <div class="log-entry">
+                    <span class="log-timestamp">[2025-01-07 15:30:50]</span>
+                    <span class="log-level-INFO">[INFO]</span>
+                    Sistema listo para recibir conexiones
+                </div>
+            </div>
+            
+            <div class="actions-grid">
+                <button class="btn" onclick="refreshLogs()">
+                    🔄 Actualizar Logs
+                </button>
+                <button class="btn btn-warning" onclick="clearLogs()">
+                    🧹 Limpiar Logs
+                </button>
+                <button class="btn btn-success" onclick="downloadLogs()">
+                    💾 Descargar Logs
+                </button>
+            </div>
+        </div>
+
+        <!-- Configuración del sistema -->
+        <div class="card">
+            <h2>⚙️ Configuración del Sistema</h2>
+            
+            <div class="alert alert-info">
+                <strong>🔧 Configuración Avanzada</strong><br>
+                Ajusta los parámetros del sistema según tus necesidades.
+            </div>
+
+            <div class="actions-grid">
+                <button class="btn" onclick="editConfig()">
+                    ✏️ Editar Configuración
+                </button>
+                <button class="btn btn-success" onclick="backupConfig()">
+                    💾 Backup Config
+                </button>
+                <button class="btn btn-warning" onclick="resetConfig()">
+                    🔄 Restaurar Config
+                </button>
+                <button class="btn btn-danger" onclick="factoryReset()">
+                    🏭 Reset de Fábrica
+                </button>
+            </div>
+        </div>
+
+        <!-- Mantenimiento -->
+        <div class="maintenance-notice">
+            <h3>🛠️ Herramientas de Mantenimiento</h3>
+            <p>Estas herramientas están en desarrollo y estarán disponibles próximamente.</p>
+        </div>
+    </div>
+
+    <script>
+        // Funciones de administración
+        function checkSystemHealth() {
+            alert('🔍 Verificando estado del sistema...\n\n✅ Todos los servicios funcionan correctamente');
+        }
+
+        function restartServices() {
+            if (confirm('¿Reiniciar todos los servicios? Esto puede tomar unos minutos.')) {
+                alert('🔃 Reiniciando servicios... (Funcionalidad en desarrollo)');
+            }
+        }
+
+        function maintenanceMode() {
+            if (confirm('¿Activar modo mantenimiento? Los usuarios no podrán acceder al sistema.')) {
+                alert('🛠️ Activando modo mantenimiento... (Funcionalidad en desarrollo)');
+            }
+        }
+
+        function viewAllUsers() {
+            alert('👥 Mostrando lista de usuarios... (Funcionalidad en desarrollo)');
+        }
+
+        function createUser() {
+            const username = prompt('👤 Ingresa el nombre de usuario:');
+            const email = prompt('📧 Ingresa el email:');
+            
+            if (username && email) {
+                alert(`✅ Usuario creado: ${username} (${email})\n\n⚠️ Funcionalidad en desarrollo`);
+            }
+        }
+
+        function exportUsers() {
+            alert('📤 Exportando lista de usuarios... (Funcionalidad en desarrollo)');
+        }
+
+        function bulkUserActions() {
+            alert('🔧 Acciones masivas de usuarios... (Funcionalidad en desarrollo)');
+        }
+
+        function refreshLogs() {
+            const logsContainer = document.getElementById('systemLogs');
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 19).replace('T', ' ');
+            
+            const newLog = document.createElement('div');
+            newLog.className = 'log-entry';
+            newLog.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span class="log-level-INFO">[INFO]</span>
+                Logs actualizados por administrador
+            `;
+            
+            logsContainer.appendChild(newLog);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function clearLogs() {
+            if (confirm('¿Limpiar todos los logs? Esta acción no se puede deshacer.')) {
+                document.getElementById('systemLogs').innerHTML = '<div class="log-entry">Logs limpiados</div>';
+            }
+        }
+
+        function downloadLogs() {
+            alert('💾 Descargando logs del sistema... (Funcionalidad en desarrollo)');
+        }
+
+        function editConfig() {
+            alert('✏️ Editor de configuración... (Funcionalidad en desarrollo)');
+        }
+
+        function backupConfig() {
+            alert('💾 Creando backup de configuración... (Funcionalidad en desarrollo)');
+        }
+
+        function resetConfig() {
+            if (confirm('¿Restaurar configuración por defecto? Se perderán los cambios personalizados.')) {
+                alert('🔄 Restaurando configuración... (Funcionalidad en desarrollo)');
+            }
+        }
+
+        function factoryReset() {
+            if (confirm('⚠️ PELIGRO: ¿Realizar reset de fábrica?\n\nEsto eliminará TODOS los datos:\n• Usuarios\n• Búsquedas\n• Reportes\n• Configuraciones\n\n¿Continuar?')) {
+                if (confirm('🔴 CONFIRMACIÓN FINAL\n\n¿Estás ABSOLUTAMENTE SEGURO?')) {
+                    alert('🏭 Reset de fábrica... (Funcionalidad en desarrollo)');
+                }
+            }
+        }
+
+        // Actualizar logs automáticamente cada 30 segundos
+        setInterval(function() {
+            // Aquí se podría hacer una llamada AJAX para obtener logs reales
+            console.log('Actualizando logs automáticamente...');
+        }, 30000);
+    </script>
+</body>
+</html>
