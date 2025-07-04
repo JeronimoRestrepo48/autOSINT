@@ -174,6 +174,72 @@ bash install_osint_tools.sh --social
 
 Para documentación completa, consulta `docs/OSINT_CLI_TOOLS.md`
 
+## 🧠 Búsqueda Asistida por Inteligencia Artificial (IA)
+
+Esta plataforma ahora integra capacidades de IA para potenciar tus investigaciones OSINT.
+
+### Componentes Clave de la IA:
+
+1.  **Interpretación de Prompts (`ai_core.interpret_prompt_for_osint`)**:
+    *   Utiliza un Modelo de Lenguaje Grande (LLM) como GPT de OpenAI a través de Langchain.
+    *   Analiza el prompt del usuario en lenguaje natural.
+    *   Extrae:
+        *   `main_target`: El objetivo principal de la investigación.
+        *   `target_type`: Tipo del objetivo (persona, empresa, dominio, IP, tema, etc.).
+        *   `specific_details`: Datos concretos sobre el objetivo (nombre, email, NIT, URL, etc.).
+        *   `information_needed`: Qué tipo de información busca el usuario.
+        *   `sources_hint`: Pistas sobre fuentes a consultar.
+        *   `enable_dorking`: Si se debe usar Google Dorking.
+        *   `output_format_preference`: Preferencia de formato para el reporte.
+    *   Devuelve esta información en una estructura JSON.
+
+2.  **Orquestación de Búsquedas (`ai_core.orchestrate_osint_search`)**:
+    *   Toma la estructura JSON de la interpretación.
+    *   Mapea la intención y las entidades extraídas a las funcionalidades de búsqueda existentes en `EnhancedOSINTSearcher` (del archivo `MCP.py`).
+    *   Ejecuta las búsquedas OSINT correspondientes de forma automatizada.
+    *   Agrega los resultados obtenidos de las diversas herramientas.
+
+3.  **Generación de Resúmenes (`ai_core.generate_osint_report_summary`)**:
+    *   Recibe los resultados crudos de la orquestación y la interpretación original del prompt.
+    *   Utiliza el LLM para sintetizar la información.
+    *   Genera un resumen ejecutivo narrativo, destacando los hallazgos más relevantes en relación con la solicitud del usuario.
+
+### Flujo de Trabajo de la Búsqueda IA:
+
+1.  **Usuario**: Ingresa un prompt en la pestaña "Búsqueda IA" de la interfaz web.
+    *   Ejemplo: "Investigar la empresa 'Acme Corp', buscar noticias recientes y verificar su dominio principal 'acme.com' en busca de subdominios expuestos. Generar un resumen."
+2.  **Frontend (`search.html`, `main.js`)**: Envía el prompt al endpoint `/api/ai_search`.
+3.  **Backend (`MCP.py` - endpoint `/api/ai_search`):**
+    *   Recibe el prompt.
+    *   Llama a `ai_core.interpret_prompt_for_osint(prompt)`.
+    *   Llama a `ai_core.orchestrate_osint_search(interpretation, osint_searcher_instance)`.
+    *   Llama a `ai_core.generate_osint_report_summary(raw_results, prompt, interpretation)`.
+    *   Devuelve una respuesta JSON con la interpretación, el resumen y una muestra de los resultados crudos.
+4.  **Frontend**: Muestra la interpretación, el resumen y los resultados al usuario.
+
+### Configuración de la IA:
+
+*   **API Key de OpenAI**: Es **obligatorio** configurar una API Key válida de OpenAI.
+    *   Edita el archivo `config/ia_config.json`.
+    *   Reemplaza `"TU_API_KEY_DE_OPENAI_AQUI"` con tu clave.
+        ```json
+        {
+          "openai_api_key": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "default_model_name": "gpt-3.5-turbo", // Modelo a usar
+          "temperature": 0.7, // Creatividad del LLM (0.0 a 1.0)
+          "max_tokens": 1500 // Límite de tokens para la respuesta del resumen
+        }
+        ```
+    *   Este archivo (`config/ia_config.json`) está incluido en `.gitignore` por seguridad.
+*   **Modelo LLM**: Por defecto se usa `gpt-3.5-turbo`, pero puede cambiarse en `config/ia_config.json`. Modelos más avanzados como `gpt-4` pueden ofrecer mejores resultados pero a un costo mayor.
+
+### Consideraciones Técnicas:
+
+*   **Dependencias**: `openai`, `langchain`, `langchain-openai` (ver `requirements.txt`).
+*   **Manejo de Errores**: El sistema intenta manejar errores de la API de OpenAI o de la interpretación, devolviendo mensajes descriptivos.
+*   **Límites de Tokens**: Los prompts al LLM y los resultados procesados para el resumen están diseñados para no exceder fácilmente los límites de contexto de modelos como `gpt-3.5-turbo`. Sin embargo, para investigaciones muy extensas o resultados muy voluminosos, esto podría ser un factor.
+*   **Costo**: El uso de la API de OpenAI incurre en costos según su política de precios. Monitoriza tu uso.
+
 ## 🛠️ Herramientas de Reconocimiento
 
 ### Herramientas de Reconocimiento

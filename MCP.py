@@ -50,6 +50,17 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 import io
 
+# Importar el nuevo módulo de IA
+try:
+    import ai_core
+    AI_CORE_AVAILABLE = True
+    print("INFO: Módulo ai_core cargado exitosamente.")
+except ImportError as e:
+    AI_CORE_AVAILABLE = False
+    print(f"ADVERTENCIA: Módulo ai_core.py no encontrado o con errores de importación: {e}")
+    # logging.warning(f"Módulo ai_core.py no encontrado o con errores de importación: {e}")
+
+
 # Importar módulos OSINT avanzados si están disponibles
 try:
     from osint_advanced import AdvancedOSINTToolkit
@@ -1433,6 +1444,74 @@ class FlaskWebInterface:
             
             user = get_current_user()
             return render_template('profile.html', user=user)
+
+        @self.app.route('/api/ai_search', methods=['POST'])
+        def api_ai_search():
+            auth_check = require_auth()
+            if auth_check and self.config.web_auth_enabled: # Proteger endpoint si la autenticación está habilitada
+                return jsonify({'error': 'No autorizado'}), 401
+
+            if not AI_CORE_AVAILABLE:
+                return jsonify({'error': 'El módulo de IA no está disponible.'}), 503
+
+            try:
+                data = request.get_json()
+                user_prompt = data.get('prompt', '').strip()
+
+                if not user_prompt:
+                    return jsonify({'error': 'Prompt requerido'}), 400
+
+                user = get_current_user()
+                user_id = user['id'] if user else 1 # Asignar un user_id por defecto si no hay sesión
+
+                logger.info(f"AI Search: Recibido prompt de user_id {user_id}: '{user_prompt}'")
+
+                # 1. Interpretar el prompt
+                interpretation = ai_core.interpret_prompt_for_osint(user_prompt)
+                logger.debug(f"AI Search: Interpretación: {interpretation}")
+                if interpretation.get("error"):
+                    return jsonify({'error': f"Error de interpretación de IA: {interpretation['error']}", 'details': interpretation.get('raw_response')}), 500
+
+                # Añadir user_id a specific_details para que la orquestación lo use si es necesario
+                interpretation.setdefault("specific_details", {})["user_id"] = user_id
+
+                # 2. Orquestar la búsqueda OSINT
+                # La instancia de osint_searcher ya está disponible como self.osint_searcher
+                raw_osint_results = ai_core.orchestrate_osint_search(interpretation, self.osint_searcher)
+                logger.debug(f"AI Search: Resultados crudos OSINT: {raw_osint_results[:2]}") # Loguear solo una muestra
+
+                # Verificar si hubo error en la orquestación
+                if raw_osint_results and isinstance(raw_osint_results, list) and raw_osint_results[0].get("error"):
+                     return jsonify({'error': f"Error durante la búsqueda OSINT: {raw_osint_results[0]['error']}"}), 500
+
+                # 3. Generar el resumen/reporte con IA
+                summary = ai_core.generate_osint_report_summary(raw_osint_results, user_prompt, interpretation)
+                logger.debug(f"AI Search: Resumen generado: {summary[:200]}...") # Loguear inicio del resumen
+
+                # Guardar la búsqueda y los resultados (simplificado por ahora)
+                # Podríamos crear un nuevo tipo de 'search' o 'report' en la BD para esto.
+                # Por ahora, guardamos el prompt como query y el resumen como parte de la descripción del primer resultado.
+
+                # search_id = self.osint_searcher.db.save_search(query=f"AI Prompt: {user_prompt[:100]}", search_type="ai_assisted", user_id=user_id)
+                # self.osint_searcher.db.save_results(search_id, [{
+                #     "source": "ai_summary",
+                #     "title": f"Resumen de IA para: {interpretation.get('main_target', 'Prompt')}",
+                #     "description": summary,
+                #     "content": json.dumps({"interpretation": interpretation, "raw_results_sample": raw_osint_results[:5]}), # Guardar muestra
+                #     "risk_level": "info"
+                # }])
+
+
+                return jsonify({
+                    'success': True,
+                    'interpretation': interpretation,
+                    'summary': summary,
+                    'raw_results_sample': raw_osint_results[:10] # Devolver una muestra de resultados crudos
+                })
+
+            except Exception as e:
+                logger.error(f"Error en API AI search: {str(e)}", exc_info=True)
+                return jsonify({'error': f'Error interno del servidor procesando la solicitud de IA: {str(e)}'}), 500
 
         @self.app.route('/reports')
         def reports():

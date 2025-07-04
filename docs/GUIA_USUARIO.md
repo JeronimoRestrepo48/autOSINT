@@ -129,6 +129,46 @@ Para más información, consulta `docs/OSINT_CLI_TOOLS.md`
 - **Legalidad**: Usar solo para fines legítimos y éticos
 - **Dependencias**: Algunas herramientas requieren instalación adicional
 
+### ✨ Nueva Funcionalidad: Búsqueda Asistida por IA
+
+OSINT Searcher ahora incluye una potente función de búsqueda asistida por Inteligencia Artificial. Esta te permite describir tu objetivo de investigación en lenguaje natural, y la IA se encargará de:
+1.  **Interpretar tu solicitud**: Entenderá qué o a quién buscas y qué tipo de información necesitas.
+2.  **Orquestar las búsquedas**: Ejecutará automáticamente las herramientas OSINT relevantes.
+3.  **Generar un resumen**: Te proporcionará un resumen ejecutivo de los hallazgos.
+
+**Cómo usar la Búsqueda IA:**
+1.  En la interfaz web, ve a la página de "Búsqueda".
+2.  Selecciona la pestaña "Búsqueda IA" (generalmente marcada con un ícono de ✨ o 🧠).
+3.  En el campo de texto (prompt), describe tu investigación. Sé tan específico como puedas.
+    *   **Ejemplo de prompt para una empresa**: "Investiga a la empresa 'Soluciones Digitales Avanzadas SAS' con NIT 900.123.456-7 ubicada en Bogotá. Necesito información sobre sus registros comerciales, directivos principales y cualquier noticia reciente sobre brechas de seguridad. Utiliza Google Dorks si es pertinente."
+    *   **Ejemplo de prompt para una persona**: "Busca información sobre 'Laura Valderrama', correo electrónico 'laura.v@email.com', que es ingeniera de software en Medellín. Me interesan sus perfiles profesionales en redes sociales y publicaciones técnicas."
+    *   **Ejemplo de prompt para un tema**: "Genera un informe sobre las últimas tácticas de phishing dirigidas al sector financiero en América Latina durante el último trimestre."
+4.  Haz clic en "Procesar con IA".
+5.  Los resultados incluirán:
+    *   La **interpretación** que hizo la IA de tu prompt.
+    *   Un **resumen ejecutivo** de los hallazgos.
+    *   Una **muestra de los resultados crudos** obtenidos por las herramientas OSINT.
+
+**Configuración (Importante):**
+Para utilizar la funcionalidad de IA, necesitas configurar tu propia API Key de OpenAI.
+1.  Localiza el archivo `config/ia_config.json` en la carpeta de instalación de OSINT Searcher.
+2.  Abre el archivo y reemplaza `"TU_API_KEY_DE_OPENAI_AQUI"` con tu API Key válida de OpenAI.
+    ```json
+    {
+      "openai_api_key": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Tu clave aquí
+      "default_model_name": "gpt-3.5-turbo",
+      // ... otras configuraciones ...
+    }
+    ```
+3.  Guarda el archivo. La funcionalidad de IA debería estar activa la próxima vez que uses la herramienta o reinicies el servidor.
+
+**Consejos para prompts efectivos:**
+*   **Claridad**: Indica claramente el objetivo principal (persona, empresa, dominio, tema).
+*   **Detalles**: Proporciona cualquier dato conocido (NIT, correo, URLs, nombres específicos).
+*   **Necesidades**: Especifica qué tipo de información buscas (financiera, técnica, reputacional, legal).
+*   **Fuentes (opcional)**: Si tienes idea de dónde buscar (ej. "bases de datos gubernamentales", "foros técnicos").
+*   **Dorking**: Menciona si quieres que se usen técnicas de Google Dorking.
+
 ## �️ Herramientas CLI Integradas
 
 ### Instalación de Herramientas
