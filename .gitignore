@@ -10,9 +10,10 @@ __pycache__/
 *.db
 *.csv
 config/osint_platform.conf
+
 # No ignorar osint_config.json ni osint_config_advanced.json ya que pueden contener configuraciones base
-# !osint_config.json
-# !osint_config_advanced.json
+osint_config.json
+osint_config_advanced.json
 # Ignorar el nuevo archivo de configuración de IA
 config/ia_config.json
 
